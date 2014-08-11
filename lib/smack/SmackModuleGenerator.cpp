@@ -112,6 +112,8 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m, SmackRep* rep) {
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
   program.appendPrelude(rep->getPrelude());
+
+  program.appendPrelude("from boogieast import *\n");
 }
 
 } // namespace smack

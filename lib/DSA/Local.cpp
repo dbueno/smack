@@ -1125,7 +1125,7 @@ bool GraphBuilder::visitIntrinsic(CallSite CS, Function *F) {
         return true;
     }
 
-    DEBUG(errs() << "[dsa:local] Unhandled intrinsic: " << F->getName() << "\n");
+    (errs() << "[dsa:local] Unhandled intrinsic: " << F->getName() << "\n");
     assert(0 && "Unhandled intrinsic");
     return false;
   }

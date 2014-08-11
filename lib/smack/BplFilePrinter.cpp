@@ -7,6 +7,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
 #include <sstream>
+#include <cassert>
 
 namespace smack {
 

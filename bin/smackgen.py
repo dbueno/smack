@@ -62,6 +62,7 @@ def clang(scriptPathName, inputFile, memoryModel, clangArgs):
   #This should more or less maintain stdout/stderr interleaving order
   #However, this will be problematic if any callers want to differentiate
   #    between clangs stdout and stderr.
+  print >> sys.stderr, clangCommand
   p = subprocess.Popen(clangCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   clangStdout, clangStderr = p.communicate()
   clangOutput = clangStdout
@@ -85,6 +86,7 @@ def smackGenerate(sysArgv):
 
   fileExtension = path.splitext(inputFile.name)[1]
   options = []
+  clangOutput = ''
   if fileExtension == '.c':
     # if input file is .c, then search for options in comments and compile it with clang
     lines = inputFile.readlines()

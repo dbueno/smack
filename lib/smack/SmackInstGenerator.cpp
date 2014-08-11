@@ -52,6 +52,8 @@ string SmackInstGenerator::createVar() {
   return name;
 }
 
+/// Generate a (probably?) unique name. I'm assuming this is to deal
+/// with turning locals into Boogie globals.
 void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
     if (!inst.hasName() || !rep.isSmackGeneratedName(inst.getName())) {
@@ -66,6 +68,8 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   }
 }
 
+
+/// Put a source location annotation on the instruction. Nothing fancy. - dlb
 void SmackInstGenerator::annotate(llvm::Instruction& i, Block* b) {
 
   if (llvm::MDNode* n = i.getMetadata("dbg")) {      

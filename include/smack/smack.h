@@ -38,11 +38,11 @@ void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
 void __SMACK_assert(bool v) {
-  __SMACK_code("assert {@} != 0;", v);
+  __SMACK_code("AssertStmt({@} != 0)", v);
 }
 
 void __SMACK_assume(bool v) {
-  __SMACK_code("assume {@} != 0;", v);
+  __SMACK_code("AssumeStmt({@} != 0)", v);
 }
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
@@ -53,9 +53,9 @@ void __SMACK_assume(bool v) {
 // }
 
 int __SMACK_nondet() {
-  static int XXX;
+  static volatile int XXX;
   int x = XXX;
-  __SMACK_code("havoc @;", x);
+  __SMACK_code("HavocStmt(@)", x);
   return x;
 }
 

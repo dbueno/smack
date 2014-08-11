@@ -12,6 +12,7 @@ namespace smack {
 using namespace std;
 
 unsigned Decl::uniqueId = 0;
+static const char *quote = "\"";
 
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
@@ -388,44 +389,39 @@ void BinExpr::print(ostream& os) const {
   os << " " << rhs << ")";
 }
 
-void CondExpr::print(ostream& os) const {
-  os << "if " << cond << " then " << then << " else " << else_;
+void CondExpr::print(ostream &os) const {
+    os << "CondExpr(" << cond << ", " << then << ", " << else_ << ")";
 }
 
 void FunExpr::print(ostream& os) const {
-  os << fun;
-  print_seq<const Expr*>(os, args, "(", ", ", ")");
+  os << "FunExpr(\"" << fun << "\", ";
+  print_seq<const Expr*>(os, args, "[", ", ", "]");
+  os << ")";
 }
 
 void LitExpr::print(ostream& os) const {
   switch (lit) {
   case True:
-    os << "true";
+    os << "True";
     break;
   case False:
-    os << "false";
+    os << "False";
     break;
   case Num:
-    os << val;
-    break;
   case Bv8:
-    os << val << "bv8";
-    break;
   case Bv32:
-    os << val << "bv32";
-    break;
   case Bv64:
-    os << val << "bv64";
+    os << val;
     break;
   }
 }
 
 void NegExpr::print(ostream& os) const {
-  os << "-(" << expr << ")";
+  os << "NegExpr(" << expr << ")";
 }
 
 void NotExpr::print(ostream& os) const {
-  os << "!(" << expr << ")";
+  os << "NotExpr(" << expr << ")";
 }
 
 void QuantExpr::print(ostream& os) const {
@@ -443,18 +439,19 @@ void QuantExpr::print(ostream& os) const {
 }
 
 void SelExpr::print(ostream& os) const {
-  os << base;
+  os << "SelExpr(" << base << ", ";
   print_seq<const Expr*>(os, idxs, "[", ", ", "]");
+  os << ")";
 }
 
 void UpdExpr::print(ostream& os) const {
-  os << base << "[";
+  os << "UpdExpr(\"" << base << "\", [";
   print_seq<const Expr*>(os, idxs, ", ");
-  os << " := " << val << "]";
+  os << "], " << val << ")";
 }
 
 void VarExpr::print(ostream& os) const {
-  os << var;
+  os << "VarExpr(\"" << var << "\")";
 }
 
 void StrVal::print(ostream& os) const {
@@ -473,32 +470,34 @@ void Attr::print(ostream& os) const {
 }
 
 void AssertStmt::print(ostream& os) const {
-  os << "assert " << expr << ";";
+  os << "AssertStmt(" << expr << ")";
 }
 
 void AssignStmt::print(ostream& os) const {
-  print_seq<const Expr*>(os, lhs, ", ");
-  os << " := ";
-  print_seq<const Expr*>(os, rhs, ", ");
-  os << ";";
+    os << "AssignStmt([";
+    print_seq<const Expr*>(os, lhs, ", ");
+    os << "], [";
+    print_seq<const Expr*>(os, rhs, ", ");
+    os << "])";
 }
 
 void AssumeStmt::print(ostream& os) const {
-  os << "assume ";
+  os << "AssumeStmt(";
+  os << expr;
   if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << expr << ";";
+    print_seq<const Attr*>(os, attrs, ", attrs=[", ", ", "]");
+  os << ")";
 }
 
 void CallStmt::print(ostream& os) const {
-  os << "call ";
-  if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << "CallStmt(";
   if (returns.size() > 0)
-    print_seq<string>(os, returns, "", ", ", " := ");
-  os << proc;
-  print_seq<const Expr*>(os, params, "(", ", ", ")");
-  os << ";";
+    print_seq<string>(os, returns, "[\"", "\", \"", "\"], ");
+  os << quote << proc << quote;
+  print_seq<const Expr*>(os, params, ", [", ", ", "]");
+  if (attrs.size() > 0)
+    print_seq<const Attr*>(os, attrs, "attrs=[", ", ", "]");
+  os << ")";
 }
 
 void Comment::print(ostream& os) const {
@@ -506,19 +505,19 @@ void Comment::print(ostream& os) const {
 }
 
 void GotoStmt::print(ostream& os) const {
-  os << "goto ";
-  print_seq<string>(os, targets, ", ");
-  os << ";";
+  os << "GotoStmt([";
+  print_seq<string>(os, targets, "\"", ", ", "\"");
+  os << "])";
 }
 
 void HavocStmt::print(ostream& os) const {
-  os << "havoc ";
+  os << "HavocStmt([";
   print_seq<string>(os, vars, ", ");
-  os << ";";
+  os << "])";
 }
 
 void ReturnStmt::print(ostream& os) const {
-  os << "return;";
+  os << "ReturnStmt()";
 }
 
 void CodeStmt::print(ostream& os) const {
@@ -543,11 +542,14 @@ void AxiomDecl::print(ostream& os) const {
 }
 
 void ConstDecl::print(ostream& os) const {
-  os << "const ";
+  os << "add_constant(";
+  os << quote << name << "\", \"" << type << "\", ";
+  os << (unique ? "unique=True" : "unique=False");
   if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << (unique ? "unique " : "") << name << ": " << type << ";";
+    print_seq<const Attr*>(os, attrs, ", attrs=[", " ", "]");
+  os << ")";
 }
+
 
 void FuncDecl::print(ostream& os) const {
   os << "function " << name;
@@ -559,71 +561,77 @@ void FuncDecl::print(ostream& os) const {
   os << ": " << type << " { " << body << " };";
 }
 
-void VarDecl::print(ostream& os) const {
-  if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << "var " << name << ": " << type << ";";
+void VarDecl::print(ostream &os) const {
+    os << "VarDecl(\"" << name << "\", \"" << type << "\"";
+    if (attrs.size() > 0)
+        print_seq<const Attr*>(os, attrs, ", [", ", ", "]");
+    os << ")";
 }
 
-void ProcDecl::print(ostream& os) const {
-  os << "procedure ";
+void ProcDecl::print(ostream &os) const {
+    os << "Procedure(";
   if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << name << "(";
-  for (unsigned i = 0; i < params.size(); i++)
-    os << params[i].first << ": " << params[i].second
-       << (i < params.size() - 1 ? ", " : "");
-  os << ")";
-  if (rets.size() > 0) {
-    os << endl;
-    os << "  returns (";
-    for (unsigned i = 0; i < rets.size(); i++)
-      os << rets[i].first << ": " << rets[i].second
-         << (i < rets.size() - 1 ? ", " : "");
-    os << ")";
-  }
-  if (blocks.size() == 0)
-    os << ";";
+    print_seq<const Attr*>(os, attrs, "[", ", ", "]");
+  os << "\"" << name << "\", ";
 
-  if (mods.size() > 0) {
-    os << endl;
-    print_seq<string>(os, mods, "  modifies ", ", ", ";");
+  os << "params=[";
+  for (unsigned i = 0; i < params.size(); i++)
+    os << quote << params[i].first << "\", \"" << params[i].second << quote
+       << (i < params.size() - 1 ? ", " : "");
+  os << "]";
+  if (rets.size() > 0) {
+    os << ", rets=[";
+    for (unsigned i = 0; i < rets.size(); i++)
+      os << quote << rets[i].first << "\", \"" << rets[i].second << quote
+         << (i < rets.size() - 1 ? ", " : "");
+    os << "]";
   }
+  // if (blocks.size() == 0)
+  //   os << ");";
+
+  // if (mods.size() > 0) {
+  //   os << endl;
+  //   print_seq<string>(os, mods, "  modifies ", ", ", ";");
+  // }
   if (requires.size() > 0) {
     os << endl;
-    print_seq<const Expr*>(os, requires, "  requires ", ";\n  requires ", ";");
+    print_seq<const Expr*>(os, requires, ", requires=[", ", ", "]");
   }
   if (ensures.size() > 0) {
     os << endl;
-    print_seq<const Expr*>(os, ensures, "  ensures ", ";\n  ensures ", ";");
+    print_seq<const Expr*>(os, ensures, ", ensures=[", ", ", "]");
   }
   if (blocks.size() > 0) {
-    os << endl;
-    os << "{" << endl;
+    os << ", blocks=[" << endl;
     if (decls.size() > 0)
-      print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
-    print_seq<Block*>(os, blocks, "\n");
-    os << endl << "}";
+      print_set<Decl*>(os, decls, "  ", ",\n  ", ",\n");
+    print_seq<Block*>(os, blocks, ",\n");
+    os << endl << "]";
   }
+  os << ")" << endl;
 }
 
 void CodeDecl::print(ostream& os) const {
   os << name;
 }
 
-void Block::print(ostream& os) const {
-  if (name != "")
-    os << name << ":" << endl;
-  print_seq<const Stmt*>(os, stmts, "  ", "\n  ", "");
+void Block::print(ostream &os) const {
+    os << "Block(";
+    if (name != "")
+        os << "name=\"" << name << "\",";
+    print_seq<const Stmt*>(os, stmts, "\n[", ",\n  ", "]");
+    os << ")";
 }
 
+
 void Program::print(ostream& os) const {
-  os << "// BEGIN SMACK-GENERATED CODE" << endl;
-  os << prelude;
+  os << "# BEGIN SMACK-GENERATED CODE" << endl;
+  // os << prelude;
   print_set<Decl*>(os, decls, "\n");
   os << endl;
-  os << endl;
-  os << "// END SMACK-GENERATED CODE" << endl;
+  // os << endl;
+  os << "# END SMACK-GENERATED CODE" << endl;
 }
+
 }
 

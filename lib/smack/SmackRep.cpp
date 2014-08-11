@@ -876,6 +876,7 @@ void SmackRep::addInit(unsigned region, const Expr* addr, const llvm::Constant* 
     }
 
   } else {
+    errs() << "addr: " << addr << " val: " << val << ", " << val->getType() << "\n";
     assert (false && "Unexpected static initializer.");
   }
 }
