@@ -806,11 +806,11 @@ string SmackRep::code(llvm::CallInst& ci) {
 string SmackRep::getPrelude() {
   stringstream s;
   s << endl;
-  s << "// Memory region declarations";
+  s << "# Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i)
-    s << "var " << memReg(i) 
-      << ": [" << getPtrType() << "] " << getPtrType() << ";" << endl;
+    s << "add_memory_region(\"" << memReg(i) 
+      << "\", \"" << getPtrType() << "\", \"" << getPtrType() << "\")" << endl;
   
   s << endl;
 
@@ -823,7 +823,9 @@ string SmackRep::getPrelude() {
     s << endl;
   }
 
-  s << "axiom $GLOBALS_BOTTOM == " << globalsBottom << ";" << endl;
+  s << "add_constant(\"$GLOBALS_BOTTOM\", \"int\")\n";
+
+  s << "add_axiom(Eq(\"$GLOBALS_BOTTOM\", Num(" << globalsBottom << ")))" << endl;
 
   return s.str();
 }

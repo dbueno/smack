@@ -332,61 +332,61 @@ template<class T, class C> void print_set(ostream& os, set<T,C> ts) {
 }
 
 void BinExpr::print(ostream& os) const {
-  os << "(" << lhs << " ";
+  // os << "(" << lhs << " ";
   switch (op) {
   case Iff:
-    os << "<==>";
+    os << "Iff";
     break;
   case Imp:
-    os << "==>";
+    os << "Implies";
     break;
   case Or:
-    os << "||";
+    os << "Or";
     break;
   case And:
-    os << "&&";
+    os << "And";
     break;
   case Eq:
-    os << "==";
+    os << "Eq";
     break;
   case Neq:
-    os << "!=";
+    os << "Neq";
     break;
   case Lt:
-    os << "<";
+    os << "LT";
     break;
   case Gt:
-    os << ">";
+    os << "GT";
     break;
   case Lte:
-    os << "<=";
+    os << "LTE";
     break;
   case Gte:
-    os << ">=";
+    os << "GTE";
     break;
   case Sub:
     os << "<:";
     break;
   case Conc:
-    os << "++";
+    os << "Concat";
     break;
   case Plus:
-    os << "+";
+    os << "Plus";
     break;
   case Minus:
-    os << "-";
+    os << "Minus";
     break;
   case Times:
-    os << "*";
+    os << "Times";
     break;
   case Div:
-    os << "/";
+    os << "Div";
     break;
   case Mod:
-    os << "%";
+    os << "Mod";
     break;
   }
-  os << " " << rhs << ")";
+  os << "(" << lhs << ", " << rhs << ")";
 }
 
 void CondExpr::print(ostream &os) const {
@@ -402,16 +402,16 @@ void FunExpr::print(ostream& os) const {
 void LitExpr::print(ostream& os) const {
   switch (lit) {
   case True:
-    os << "True";
+    os << "Bool(True)";
     break;
   case False:
-    os << "False";
+    os << "Bool(False)";
     break;
   case Num:
   case Bv8:
   case Bv32:
   case Bv64:
-    os << val;
+    os << "Num(" << val << ")";
     break;
   }
 }
@@ -463,10 +463,10 @@ void ExprVal::print(ostream& os) const {
 }
 
 void Attr::print(ostream& os) const {
-  os << "{:" << name;
+  os << "('" << name << "'";
   if (vals.size() > 0)
-    print_seq<const AttrVal*>(os, vals, " ", ", ", "");
-  os << "}";
+    print_seq<const AttrVal*>(os, vals, ", [", ", ", "]");
+  os << ")";
 }
 
 void AssertStmt::print(ostream& os) const {
@@ -491,12 +491,12 @@ void AssumeStmt::print(ostream& os) const {
 
 void CallStmt::print(ostream& os) const {
   os << "CallStmt(";
-  if (returns.size() > 0)
-    print_seq<string>(os, returns, "[\"", "\", \"", "\"], ");
   os << quote << proc << quote;
   print_seq<const Expr*>(os, params, ", [", ", ", "]");
+  if (returns.size() > 0)
+    print_seq<string>(os, returns, ", rets=[\"", "\", \"", "\"]");
   if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "attrs=[", ", ", "]");
+    print_seq<const Attr*>(os, attrs, ", attrs=[", ", ", "]");
   os << ")";
 }
 
@@ -506,7 +506,7 @@ void Comment::print(ostream& os) const {
 
 void GotoStmt::print(ostream& os) const {
   os << "GotoStmt([";
-  print_seq<string>(os, targets, "\"", ", ", "\"");
+  print_seq<string>(os, targets, "\"", "\", \"", "\"");
   os << "])";
 }
 
@@ -535,10 +535,11 @@ void TypeDecl::print(ostream& os) const {
 }
 
 void AxiomDecl::print(ostream& os) const {
-  os << "axiom ";
+  os << "AxiomDecl(";
+  os << expr;
   if (attrs.size() > 0)
-    print_seq<const Attr*>(os, attrs, "", " ", " ");
-  os << expr << ";";
+    print_seq<const Attr*>(os, attrs, ", attrs=[", ", ", "]");
+  os << ")";
 }
 
 void ConstDecl::print(ostream& os) const {
@@ -576,13 +577,13 @@ void ProcDecl::print(ostream &os) const {
 
   os << "params=[";
   for (unsigned i = 0; i < params.size(); i++)
-    os << quote << params[i].first << "\", \"" << params[i].second << quote
+    os << "(\"" << params[i].first << "\", \"" << params[i].second << "\")"
        << (i < params.size() - 1 ? ", " : "");
   os << "]";
   if (rets.size() > 0) {
     os << ", rets=[";
     for (unsigned i = 0; i < rets.size(); i++)
-      os << quote << rets[i].first << "\", \"" << rets[i].second << quote
+      os << "(\"" << rets[i].first << "\", \"" << rets[i].second << "\")"
          << (i < rets.size() - 1 ? ", " : "");
     os << "]";
   }
@@ -617,16 +618,16 @@ void CodeDecl::print(ostream& os) const {
 
 void Block::print(ostream &os) const {
     os << "Block(";
+    print_seq<const Stmt*>(os, stmts, "[\n", ",\n  ", "]");
     if (name != "")
-        os << "name=\"" << name << "\",";
-    print_seq<const Stmt*>(os, stmts, "\n[", ",\n  ", "]");
+        os << ", name=\"" << name << "\"";
     os << ")";
 }
 
 
 void Program::print(ostream& os) const {
   os << "# BEGIN SMACK-GENERATED CODE" << endl;
-  // os << prelude;
+  os << prelude;
   print_set<Decl*>(os, decls, "\n");
   os << endl;
   // os << endl;

@@ -38,11 +38,11 @@ void __SMACK_decl(const char *fmt, ...);
 void __SMACK_top_decl(const char *fmt, ...);
 
 void __SMACK_assert(bool v) {
-  __SMACK_code("AssertStmt({@} != 0)", v);
+  __SMACK_code("AssertStmt(Neq({@}, Num(0)))", v);
 }
 
 void __SMACK_assume(bool v) {
-  __SMACK_code("AssumeStmt({@} != 0)", v);
+  __SMACK_code("AssumeStmt(Neq({@}, Num(0)))", v);
 }
 
 //// PROBLEM: in the 2D memory model, the declaration of boogie_si_record_int
@@ -63,6 +63,7 @@ void __SMACK_decls() {
 #define D(d) __SMACK_top_decl(d)
 
   // Integer arithmetic
+/*
   D("function $add(p1:int, p2:int) returns (int) {p1 + p2}");
   D("function $sub(p1:int, p2:int) returns (int) {p1 - p2}");
   D("function $mul(p1:int, p2:int) returns (int) {p1 * p2}");
@@ -107,8 +108,10 @@ void __SMACK_decls() {
   D("function $b2i(b: bool) returns (int);");
   D("axiom $b2i(true) == 1;");
   D("axiom $b2i(false) == 0;");
+*/
 
   // Floating point
+/*
   D("type float;");
   D("function $fp(a:int) returns (float);");
   D("const $ffalse: float;");
@@ -136,14 +139,15 @@ void __SMACK_decls() {
   D("function $fp2ui(f:float) returns (int);");
   D("function $si2fp(i:int) returns (float);");
   D("function $ui2fp(i:int) returns (float);");
-
+*/
   // Memory Model
+/*
   D("function $ptr(obj:int, off:int) returns (int) {obj + off}");
   D("function $obj(int) returns (int);");
   D("function $off(ptr:int) returns (int) {ptr}");
 
-  D("const unique $NULL: int;");
-  D("axiom $NULL == 0;");
+  D("add_constant(\"$NULL\", \"int\")");
+  D("add_axiom(\"$NULL\" == 0)");
   D("const $UNDEF: int;");
 
   D("function $pa(pointer: int, index: int, size: int) returns (int);");
@@ -169,13 +173,14 @@ void __SMACK_decls() {
   D("procedure boogie_si_record_int(i: int);");
   D("const $MOP: $mop;");
   
-  D("const $GLOBALS_BOTTOM: int;");
   D("function $isExternal(p: int) returns (bool) { p < $GLOBALS_BOTTOM - 32768 }");
-  
+*/
 #if MEMORY_MODEL_NO_REUSE_IMPLS
+/*
   D("var $Alloc: [int] bool;");
   D("var $CurrAddr:int;");
-
+*/
+/*
   D("procedure $malloc(n: int) returns (p: int)\n"
     "modifies $CurrAddr, $Alloc;\n"
     "{\n"
@@ -207,8 +212,9 @@ void __SMACK_decls() {
     "  }\n"
     "  $Alloc[p] := true;\n"
     "}");
-
+*/
 #elif MEMORY_MODEL_REUSE // can reuse previously-allocated and freed addresses
+/*
   D("var $Alloc: [int] bool;");
   D("var $Size: [int] int;");
 
@@ -238,8 +244,9 @@ void __SMACK_decls() {
     "ensures (forall q: int :: {$Size[q]} q != p ==> $Size[q] == old($Size[q]));\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
-
+*/
 #else // NO_REUSE does not reuse previously-allocated addresses
+/*
   D("var $Alloc: [int] bool;");
   D("var $CurrAddr:int;");
 
@@ -267,6 +274,7 @@ void __SMACK_decls() {
     "ensures $Alloc[p];\n"
     "ensures (forall q: int :: {$Alloc[q]} q != p ==> $Alloc[q] == old($Alloc[q]));\n"
     "ensures n >= 0 ==> (forall q: int :: {$obj(q)} p <= q && q < p+n ==> $obj(q) == p);");
+*/
 #endif
 
 #undef D
