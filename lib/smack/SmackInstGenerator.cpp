@@ -58,11 +58,11 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (!inst.getType()->isVoidTy()) {
     if (!inst.hasName() || !rep.isSmackGeneratedName(inst.getName())) {
       if (rep.isBool(&inst))
-        inst.setName(SmackRep::BOOL_VAR);
+        inst.setName(SmackRep::BOOL_VAR + inst.getName());
       else if (rep.isFloat(&inst))
-        inst.setName(SmackRep::FLOAT_VAR);
+        inst.setName(SmackRep::FLOAT_VAR + inst.getName());
       else
-        inst.setName(SmackRep::PTR_VAR);
+        inst.setName(SmackRep::PTR_VAR + inst.getName());
     }
     proc.addDecl(Decl::variable(rep.id(&inst), rep.type(&inst)));
   }
