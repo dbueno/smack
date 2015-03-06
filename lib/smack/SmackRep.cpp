@@ -815,11 +815,9 @@ string SmackRep::getPrelude() {
   s << endl;
 
   if (uniqueUndefNum > 0) {
-    s << "// Undefined values" << endl;
-    s << "const ";
+    s << "# Undefined values" << endl;
     for (unsigned i=0; i<uniqueUndefNum; i++)
-      s << (i > 0 ? ", " : "") << "$u." << i;
-    s << ": " << getPtrType() << ";" << endl;  
+      s << "add_undef('$u." << i << "', '" << getPtrType() << "')" << endl;  
     s << endl;
   }
 

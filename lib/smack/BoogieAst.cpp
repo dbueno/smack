@@ -501,7 +501,7 @@ void CallStmt::print(ostream& os) const {
 }
 
 void Comment::print(ostream& os) const {
-  os << "// " << str;
+  os << "# " << str;
 }
 
 void GotoStmt::print(ostream& os) const {
