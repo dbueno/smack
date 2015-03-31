@@ -1004,14 +1004,15 @@ string SmackRep::memsetProc(int dstReg) {
       << memReg(dstReg) << "[x] == $oldDst[x]);" << endl;
     s << "}" << endl;
   } else {
-    s << "procedure $memset." << dstReg;
-    s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
-    s << "modifies " << memReg(dstReg) << ";" << endl;
-    s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
-      << memReg(dstReg) << "[x] == val);"
-      << endl;
-    s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
-      << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
+      s << "Procedure(\"$memset." << dstReg << "\", params=[('dest', 'int'), ('val', 'int'), ('len', 'int'), ('align', 'int'), ('isvolatile', 'bool')])";
+    //s << "procedure $memset." << dstReg;
+    //s << "(dest: int, val: int, len: int, align: int, isvolatile: bool);" << endl;
+    //s << "modifies " << memReg(dstReg) << ";" << endl;
+    //s << "ensures (forall x:int :: dest <= x && x < dest + len ==> "
+    //  << memReg(dstReg) << "[x] == val);"
+    //  << endl;
+    //s << "ensures (forall x:int :: !(dest <= x && x < dest + len) ==> "
+    //  << memReg(dstReg) << "[x] == old(" << memReg(dstReg) << ")[x]);" << endl;
   }
 
   return s.str();
