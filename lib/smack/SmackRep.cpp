@@ -935,6 +935,8 @@ vector<Decl*> SmackRep::globalDecl(const llvm::Value* v) {
         // Expr::fn("$slt",
         //     Expr::fn(SmackRep::ADD, Expr::id(name), Expr::lit(1024)),
         //     Expr::lit(globalsBottom)) ));
+      } else if (STRING_CONSTANT.match(g->getName().str())) {
+          addInit(getRegion(g), g, init);
       }
 
     } else {
