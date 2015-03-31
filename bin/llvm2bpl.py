@@ -33,8 +33,8 @@ def llvm2bplParser():
 
 def llvm2bpl(infile, debugFlag, memImpls):
     
-  # cmd = ['smack', '-source-loc-syms', infile.name]
-  cmd = ['smack', infile.name]
+  cmd = ['smack', '-source-loc-syms', infile.name]
+  #cmd = ['smack', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   print >> sys.stderr, cmd
