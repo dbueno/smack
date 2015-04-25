@@ -13,6 +13,8 @@
 
 #include <iostream>
 
+extern bool llvm::DebugFlag;
+
 namespace smack {
 
 using llvm::errs;
@@ -93,6 +95,7 @@ void SmackInstGenerator::processInstruction(llvm::Instruction& inst) {
 }
 
 void SmackInstGenerator::visitInstruction(llvm::Instruction& inst) {
+  llvm::DebugFlag = true;
   DEBUG(errs() << "Instruction not handled: " << inst << "\n");
   assert(false && "Instruction not handled");
 }
