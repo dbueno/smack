@@ -129,6 +129,7 @@ protected:
   DSAAliasAnalysis* aliasAnalysis;
   vector<string> bplGlobals;
   vector< pair<const llvm::Value*, bool> > memoryRegions;
+  std::map< const llvm::Value *, unsigned > regionOfValue;
   const llvm::DataLayout* targetData;
   Program* program;
   int globalsBottom;

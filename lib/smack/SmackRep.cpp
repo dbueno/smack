@@ -226,6 +226,8 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
 
   memoryRegions[r].second = memoryRegions[r].second || aliasAnalysis->isAlloced(v);
 
+  regionOfValue[v] = r;
+
   return r;
 }
 
@@ -804,14 +806,22 @@ string SmackRep::code(llvm::CallInst& ci) {
 }
 
 string SmackRep::getPrelude() {
-  stringstream s;
+  ostringstream s;
   s << endl;
   s << "# Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
-  for (unsigned i=0; i<memoryRegions.size(); ++i)
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
     s << "add_memory_region(\"" << memReg(i) 
       << "\", \"" << getPtrType() << "\", \"" << getPtrType() << "\")" << endl;
-  
+  }
+  for (std::map<const llvm::Value*, unsigned >::iterator
+        IT = regionOfValue.begin(), IE = regionOfValue.end(); IT != IE; ++IT) {
+      const llvm::Value *v = IT->first;
+      const Expr *e = expr(v);
+      s << "add_ptr_to_region(\"" << memReg(IT->second) << "\", ";
+      e->print(s);
+      s << ")" << endl;
+  }
   s << endl;
 
   if (uniqueUndefNum > 0) {
