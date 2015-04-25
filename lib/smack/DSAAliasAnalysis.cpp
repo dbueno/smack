@@ -12,14 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/Passes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Module.h"
-#include "dsa/DataStructure.h"
-#include "dsa/DSGraph.h"
 #include "smack/DSAAliasAnalysis.h"
+#include <iostream>
 
 namespace smack {
 
@@ -59,6 +53,12 @@ vector<const llvm::DSNode*> DSAAliasAnalysis::collectStaticInits(llvm::Module &M
   return sis;
 }
 
+bool DSAAliasAnalysis::isComplicatedNode(const llvm::DSNode* N) {
+  return
+    N->isIntToPtrNode() || N->isPtrToIntNode() ||
+    N->isExternalNode() || N->isUnknownNode();
+}
+
 bool DSAAliasAnalysis::isMemcpyd(const llvm::DSNode* n) {
   const llvm::EquivalenceClasses<const llvm::DSNode*> &eqs 
     = nodeEqs->getEquivalenceClasses();
@@ -77,6 +77,15 @@ bool DSAAliasAnalysis::isStaticInitd(const llvm::DSNode* n) {
     if (staticInits[i] == nn)
       return true;
   return false;
+}
+
+bool DSAAliasAnalysis::isFieldDisjoint(const llvm::Value* ptr, const llvm::Instruction* inst) {
+  const llvm::Function *F = inst->getParent()->getParent();
+  return TS->isFieldDisjoint(ptr, F);
+}
+
+bool DSAAliasAnalysis::isFieldDisjoint(const GlobalValue* V, unsigned offset) {
+  return TS->isFieldDisjoint(V, offset);
 }
 
 DSGraph *DSAAliasAnalysis::getGraphForValue(const Value *V) {
@@ -124,28 +133,70 @@ bool DSAAliasAnalysis::isExternal(const Value* v) {
   return N && N->isExternalNode();
 }
 
+bool DSAAliasAnalysis::isSingletonGlobal(const Value *V) {
+  const DSNode *N = getNode(V);
+  if (!N || !N->isGlobalNode() || N->numGlobals() > 1)
+    return false;
+
+  // Ensure this node has a unique scalar type... (?)
+  DSNode::const_type_iterator TSi = N->type_begin();
+  if (TSi == N->type_end()) return false;
+  svset<Type*>::const_iterator Ti = TSi->second->begin();
+  if (Ti == TSi->second->end()) return false;
+  const Type* T = *Ti;
+  while (T->isPointerTy()) T = T->getPointerElementType();
+  if (!T->isSingleValueType()) return false;
+  ++Ti;
+  if (Ti != TSi->second->end()) return false;
+  ++TSi;
+  if (TSi != N->type_end()) return false;
+
+  // Ensure this node is in its own class... (?)
+  const EquivalenceClasses<const DSNode*> &Cs = nodeEqs->getEquivalenceClasses();
+  EquivalenceClasses<const DSNode*>::iterator C = Cs.findValue(N);
+  assert(C != Cs.end() && "Did not find value.");
+  EquivalenceClasses<const DSNode*>::member_iterator I = Cs.member_begin(C);
+  if (I == Cs.member_end())
+    return false;
+  ++I;
+  if (I != Cs.member_end())
+    return false;
+
+  return true;
+}
+
 AliasAnalysis::AliasResult DSAAliasAnalysis::alias(const Location &LocA, const Location &LocB) {
 
-  if (LocA.Ptr == LocB.Ptr) 
+  if (LocA.Ptr == LocB.Ptr)
     return MustAlias;
 
   const DSNode *N1 = nodeEqs->getMemberForValue(LocA.Ptr);
   const DSNode *N2 = nodeEqs->getMemberForValue(LocB.Ptr);
-  
-  if ((N1->isCompleteNode() || N2->isCompleteNode()) &&
-      !(N1->isExternalNode() && N2->isExternalNode()) &&
-      !(N1->isUnknownNode() || N2->isUnknownNode())) {
-    if (!equivNodes(N1,N2))
-      return NoAlias;
+
+  assert(N1 && "Expected non-null node.");
+  assert(N2 && "Expected non-null node.");
+
+  if (N1->isIncompleteNode() && N2->isIncompleteNode())
+    goto surrender;
+
+  if (isComplicatedNode(N1) && isComplicatedNode(N2))
+    goto surrender;
+
+  if (!equivNodes(N1,N2))
+    return NoAlias;
+
+  if (isMemcpyd(N1) || isMemcpyd(N2))
+    goto surrender;
     
-    if (!isMemcpyd(N1) && !isMemcpyd(N2) 
-      && !isStaticInitd(N1) && !isStaticInitd(N2) 
-      && disjoint(&LocA,&LocB))
-      return NoAlias;
-  }
+  if (isStaticInitd(N1) || isStaticInitd(N2))
+    goto surrender;
+
+  if (disjoint(&LocA,&LocB))
+    return NoAlias;
   
   // FIXME: we could improve on this by checking the globals graph for aliased
   // global queries...
+surrender:
   return AliasAnalysis::alias(LocA, LocB);
 }
 

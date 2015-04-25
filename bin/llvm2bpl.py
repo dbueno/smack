@@ -1,4 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+#
+# This file is distributed under the MIT License. See LICENSE for details.
+#
 
 from os import path
 import sys
@@ -7,7 +10,7 @@ import argparse
 import io
 import platform
 
-VERSION = '1.4.1'
+VERSION = '1.5.1'
 
 
 def is_valid_file(parser, arg):
@@ -24,30 +27,39 @@ def llvm2bplParser():
                       type=lambda x: is_valid_file(parser,x),
                       help='input LLVM file')
   parser.add_argument('-o', '--output', dest='outfile', metavar='<file>', default='a.bpl',
-                      type=argparse.FileType('w'),
-                      help='output Boogie file (default: %(default)s)')
+                      type=str,
+                      help='output Boogie file [default: %(default)s]')
   parser.add_argument('-d', '--debug', dest='debug', action="store_true", default=False,
                       help='turn on debug info')
+  parser.add_argument('--mem-mod', dest='memmod', choices=['no-reuse', 'no-reuse-impls', 'reuse'], default='no-reuse-impls',
+                      help='set the memory model (no-reuse=never reallocate the same address, reuse=reallocate freed addresses) [default: %(default)s]')
+  parser.add_argument('--bit-precise', dest='bitprecise', action="store_true", default=False,
+                      help='enable bit precision')
+  parser.add_argument('--no-byte-access-inference', dest='nobyteaccessinference', action="store_true", default=False,
+                      help='do not optimize bit-precision with DSA')
   return parser
 
 
-def llvm2bpl(infile, debugFlag, memImpls):
+def llvm2bpl(infile, outfile, debugFlag, memImpls, bitPrecise, noByteAccessInference):
     
   cmd = ['smack', '-source-loc-syms', infile.name]
   #cmd = ['smack', infile.name]
   if debugFlag: cmd.append('-debug')
   if memImpls: cmd.append('-mem-mod-impls')
   print >> sys.stderr, cmd
-  p = subprocess.Popen(cmd)
+  cmd.append('-bpl=' + outfile)
+  if bitPrecise: cmd.append('-bit-precise')
+  if noByteAccessInference: cmd.append('-no-byte-access-inference')
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  smackOutput = p.communicate()[0]
 
-  p.wait()
-  if p.returncode != 0:
-    print >> sys.stderr, "SMACK encountered an error:"
-    print >> sys.stderr, output[0:1000], "... (output truncated)"
-    sys.exit("SMACK returned exit status %s" % p.returncode)
+  if p.returncode:
+    print >> sys.stderr, smackOutput
+    sys.exit("SMACK encountered an error when invoking SMACK tool. Exiting...")
 
-  with open('a.bpl', 'r') as outputFile:
+  with open(outfile, 'r') as outputFile:
     output = outputFile.read()
+    outputFile.close()
 
   # bplStartIndex = output.find('// SMACK-PRELUDE-BEGIN')
   # bpl = output[bplStartIndex:]
@@ -61,9 +73,10 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Outputs a plain Boogie file generated from the input LLVM file.', parents=[llvm2bplParser()])
   args = parser.parse_args()
 
-  bpl = llvm2bpl(args.infile, args.debug, args.memmod, args.memimpls)
+  bpl = llvm2bpl(args.infile, args.outfile, args.debug, "impls" in args.memmod, args.bitprecise, args.nobyteaccessinference)
 
   # write final output
-  args.outfile.write(bpl)
-  args.outfile.close()
+  with open(args.outfile, 'w') as outputFile:
+    outputFile.write(bpl)
+    outputFile.close()
 

@@ -1,11 +1,10 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 #include "smack/BoogieAst.h"
 #include "llvm/IR/Constants.h"
 #include <sstream>
+#include <iostream>
 
 namespace smack {
 
@@ -13,6 +12,18 @@ using namespace std;
 
 unsigned Decl::uniqueId = 0;
 static const char *quote = "\"";
+
+const Expr* Expr::exists(string v, string t, const Expr* e) {
+  vector< pair<string,string> > vars;
+  vars.push_back(make_pair(v,t));
+  return new QuantExpr(QuantExpr::Exists, vars, e);
+}
+
+const Expr* Expr::forall(string v, string t, const Expr* e) {
+  vector< pair<string,string> > vars;
+  vars.push_back(make_pair(v,t));
+  return new QuantExpr(QuantExpr::Forall, vars, e);
+}
 
 const Expr* Expr::and_(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::And, l, r);
@@ -28,6 +39,10 @@ const Expr* Expr::eq(const Expr* l, const Expr* r) {
 
 const Expr* Expr::lt(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Lt, l, r);
+}
+
+const Expr* Expr::fn(string f, vector<const Expr*> args) {
+  return new FunExpr(f, args);
 }
 
 const Expr* Expr::fn(string f, const Expr* x) {
@@ -57,26 +72,28 @@ const Expr* Expr::impl(const Expr* l, const Expr* r) {
   return new BinExpr(BinExpr::Imp, l, r);
 }
 
-const Expr* Expr::lit(int i) {
-  return new LitExpr(i);
-}
-const Expr* Expr::lit(int i, unsigned w) {
-  switch (w) {
-  case 0:
-    return new LitExpr(i);
-  case 8:
-    return new LitExpr(LitExpr::Bv8, i);
-  case 32:
-    return new LitExpr(LitExpr::Bv32, i);
-  case 64:
-    return new LitExpr(LitExpr::Bv64, i);
-  default:
-    assert(false && "unexpected integer width.");
-  }
+const Expr* Expr::lit(bool b) {
+  return new BoolLit(b);
 }
 
-const Expr* Expr::lit(bool b) {
-  return new LitExpr(b);
+const Expr* Expr::lit(string v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(unsigned long v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(long v) {
+  return new IntLit(v);
+}
+
+const Expr* Expr::lit(string v, unsigned w) {
+  return new BvLit(v,w);
+}
+
+const Expr* Expr::lit(unsigned long v, unsigned w) {
+  return new BvLit(v,w);
 }
 
 const Expr* Expr::neq(const Expr* l, const Expr* r) {
@@ -111,21 +128,21 @@ const Attr* Attr::attr(string s, string v) {
 }
 
 const Attr* Attr::attr(string s, int v) {
-  return attr(s, vector<const Expr*>(1, Expr::lit(v)));
+  return attr(s, vector<const Expr*>(1, Expr::lit((long) v)));
 }
 
 const Attr* Attr::attr(string s, string v, int i) {
   vector<const AttrVal*> vals;
   vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit(i)));
+  vals.push_back(new ExprVal(Expr::lit((long) i)));
   return new Attr(s, vals);
 }
 
 const Attr* Attr::attr(string s, string v, int i, int j) {
   vector<const AttrVal*> vals;
   vals.push_back(new StrVal(v));
-  vals.push_back(new ExprVal(Expr::lit(i)));
-  vals.push_back(new ExprVal(Expr::lit(j)));
+  vals.push_back(new ExprVal(Expr::lit((long) i)));
+  vals.push_back(new ExprVal(Expr::lit((long) j)));
   return new Attr(s, vals);
 }
 
@@ -148,6 +165,10 @@ const Stmt* Stmt::assign(const Expr* e, const Expr* f) {
   return new AssignStmt(vector<const Expr*>(1, e), vector<const Expr*>(1, f));
 }
 
+const Stmt* Stmt::assign(vector<const Expr*> lhs, vector<const Expr*> rhs) {
+  return new AssignStmt(lhs, rhs);
+}
+
 const Stmt* Stmt::assume(const Expr* e) {
   return new AssumeStmt(e);
 }
@@ -164,6 +185,10 @@ const Stmt* Stmt::call(string p) {
 
 const Stmt* Stmt::call(string p, const Expr* x) {
   return call(p, vector<const Expr*>(1, x), vector<string>());
+}
+
+const Stmt* Stmt::call(string p, const Expr* x, const Attr* attr) {
+  return call(p, vector<const Expr*>(1, x), vector<string>(), vector<const Attr*>(1, attr));
 }
 
 const Stmt* Stmt::call(string p, const Expr* x, string r) {
@@ -220,6 +245,10 @@ const Stmt* Stmt::havoc(string x) {
   return new HavocStmt(vector<string>(1, x));
 }
 
+const Stmt* Stmt::return_(const Expr* e) {
+  return new ReturnStmt(e);
+}
+
 const Stmt* Stmt::return_() {
   return new ReturnStmt();
 }
@@ -237,6 +266,9 @@ Decl* Decl::typee(string name, string type) {
 }
 Decl* Decl::axiom(const Expr* e) {
   return new AxiomDecl(e);
+}
+Decl* Decl::function(string name, vector< pair<string,string> > args, string type, const Expr* e) {
+  return new FuncDecl(name,vector<const Attr*>(),args,type,e);
 }
 Decl* Decl::constant(string name, string type) {
   return Decl::constant(name, type, vector<const Attr*>(), false);
@@ -299,6 +331,11 @@ ostream& operator<<(ostream& os, Program* p) {
 }
 ostream& operator<<(ostream& os, Program& p) {
   p.print(os);
+  return os;
+}
+
+template<class T,class U> ostream& operator<<(ostream& os, pair<T,U> p) {
+  os << p.first << ": " << p.second;
   return os;
 }
 
@@ -399,21 +436,16 @@ void FunExpr::print(ostream& os) const {
   os << ")";
 }
 
-void LitExpr::print(ostream& os) const {
-  switch (lit) {
-  case True:
-    os << "Bool(True)";
-    break;
-  case False:
-    os << "Bool(False)";
-    break;
-  case Num:
-  case Bv8:
-  case Bv32:
-  case Bv64:
-    os << "Num(" << val << ")";
-    break;
-  }
+void BoolLit::print(ostream& os) const {
+  os << (val ? "BoolVal(True)" : "BoolVal(False)");
+}
+
+void IntLit::print(ostream& os) const {
+  os << val;
+}
+
+void BvLit::print(ostream& os) const {
+  os << "BitVec(" << val << ", " << width << ")";
 }
 
 void NegExpr::print(ostream& os) const {
@@ -426,16 +458,16 @@ void NotExpr::print(ostream& os) const {
 
 void QuantExpr::print(ostream& os) const {
   os << "(";
-  switch (q) {
+  switch (quant) {
   case Forall:
-    os << "forall";
+    os << "forall ";
     break;
   case Exists:
-    os << "exists";
+    os << "exists ";
     break;
   }
-  os << " -- ToDo: Implement quantified expressions. ";
-  os << ")";
+  print_seq< pair<string,string> >(os, vars, ",");
+  os << " :: " << expr << ")";
 }
 
 void SelExpr::print(ostream& os) const {
@@ -452,6 +484,14 @@ void UpdExpr::print(ostream& os) const {
 
 void VarExpr::print(ostream& os) const {
   os << "VarExpr(\"" << var << "\")";
+}
+
+void CodeExpr::print(ostream& os) const {
+  os << "|{" << endl;
+  if (decls.size() > 0)
+    print_set<Decl*>(os, decls, "  ", "\n  ", "\n");
+  print_seq<Block*>(os, blocks, "\n");
+  os << endl << "}|";
 }
 
 void StrVal::print(ostream& os) const {
@@ -553,13 +593,18 @@ void ConstDecl::print(ostream& os) const {
 
 
 void FuncDecl::print(ostream& os) const {
-  os << "function " << name;
+  os << "function ";
   if (attrs.size() > 0)
     print_seq<const Attr*>(os, attrs, "", " ", " ");
+  os << name << "(";
   for (unsigned i = 0; i < params.size(); i++)
     os << params[i].first << ": " << params[i].second
        << (i < params.size() - 1 ? ", " : "");
-  os << ": " << type << " { " << body << " };";
+  os << ") returns (" << type << ")";
+  if (body)
+    os << " { " << body << " }";
+  else
+    os << ";";
 }
 
 void VarDecl::print(ostream &os) const {

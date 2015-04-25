@@ -1,92 +1,16 @@
 #! /usr/bin/env python
 
+import yaml
+import argparse
+from os import path
 import subprocess
 import re
+import glob
 import time
+import sys
 
-# list of regression tests with the expected outputs
-tests = [
-  ('simple',                r'1 verified, 0 errors?', 2),
-  ('simple_fail',           r'0 verified, 1 errors?', 2),
-  ('simple_pre',            r'1 verified, 0 errors?', 2),
-  ('simple_pre_fail',       r'0 verified, 1 errors?', 2),
-  ('simple_pre1',           r'1 verified, 0 errors?', 2),
-  ('simple_pre1_fail',      r'0 verified, 1 errors?', 2),
-  ('simple_pre2',           r'1 verified, 0 errors?', 2),
-  ('simple_pre2_fail',      r'0 verified, 1 errors?', 2),
-  ('simple_pre3',           r'1 verified, 0 errors?', 2),
-  ('simple_pre3_fail',      r'0 verified, 1 errors?', 2),
-#  ('simple_double_free',    r'0 verified, 1 errors?', 2),
-  ('pointers',              r'1 verified, 0 errors?', 2),
-  ('pointers_fail',         r'0 verified, 1 errors?', 2),
-  ('pointers1',             r'1 verified, 0 errors?', 2),
-  ('pointers1_fail',        r'0 verified, 1 errors?', 2),
-  ('pointers2',             r'1 verified, 0 errors?', 2),
-  ('pointers2_fail',        r'0 verified, 1 errors?', 2),
-  ('pointers3',             r'1 verified, 0 errors?', 2),
-  ('pointers3_fail',        r'0 verified, 1 errors?', 2),
-  ('globals',               r'1 verified, 0 errors?', 2),
-  ('globals_fail',          r'0 verified, 1 errors?', 2),
-  ('loop',                  r'1 verified, 0 errors?', 11),
-  ('loop_fail',             r'0 verified, 1 errors?', 11),
-  ('loop1',                 r'1 verified, 0 errors?', 11),
-  ('loop1_fail',            r'0 verified, 1 errors?', 11),
-  ('nondet',                r'1 verified, 0 errors?', 2),
-  ('printfs',               r'1 verified, 0 errors?', 2),
-  ('struct_return',         r'1 verified, 0 errors?', 2),
-  ('struct_init',           r'1 verified, 0 errors?', 2),
-  ('struct_init_fail',      r'0 verified, 1 errors?', 2),
-  ('extern_struct',         r'0 verified, 1 errors?', 2),
-  ('extern_func',           r'1 verified, 0 errors?', 2),
-  ('extern_mem',            r'1 verified, 0 errors?', 2),
-  ('extern_mem_fail',       r'0 verified, 1 errors?', 2),
-  ('smack_code_call',       r'1 verified, 0 errors?', 2),
-  ('smack_code_call_fail',  r'0 verified, 1 errors?', 2),
-  ('return_label',          r'1 verified, 0 errors?', 2),
-  ('struct_cast',           r'1 verified, 0 errors?', 2),
-  ('struct_cast_fail',      r'0 verified, 1 errors?', 2),
-  ('struct_cast1',          r'1 verified, 0 errors?', 2),
-  ('struct_cast1_fail',     r'0 verified, 1 errors?', 2),
-  ('nested_struct',         r'1 verified, 0 errors?', 2),
-  ('nested_struct_fail',    r'0 verified, 1 errors?', 2),
-  ('nested_struct1',        r'1 verified, 0 errors?', 2),
-  ('nested_struct1_fail',   r'0 verified, 1 errors?', 2),
-  ('nested_struct2',        r'1 verified, 0 errors?', 2),
-  ('nested_struct2_fail',   r'0 verified, 1 errors?', 2),
-  ('struct_assign',         r'1 verified, 0 errors?', 2),
-  ('struct_assign_fail',    r'0 verified, 1 errors?', 2),
-  ('func_ptr',              r'1 verified, 0 errors?', 2),
-  ('func_ptr_fail',         r'0 verified, 1 errors?', 2),
-  ('func_ptr1',             r'1 verified, 0 errors?', 2),
-  ('func_ptr1_fail',        r'0 verified, 1 errors?', 2),
-  ('array',                 r'1 verified, 0 errors?', 2),
-  ('array1',                r'1 verified, 0 errors?', 2),
-  ('array1_fail',           r'0 verified, 1 errors?', 2),
-  ('array2',                r'1 verified, 0 errors?', 11),
-  ('array2_fail',           r'0 verified, 1 errors?', 11),
-  ('array3',                r'1 verified, 0 errors?', 11),
-  ('array3_fail',           r'0 verified, 1 errors?', 11),
-  ('array4',                r'1 verified, 0 errors?', 11),
-  ('array4_fail',           r'0 verified, 1 errors?', 11),
-#  ('array_free',            r'1 verified, 0 errors?', 11),
-#  ('array_free_fail',       r'0 verified, 3 errors?', 11),
-#  ('array_free1',           r'1 verified, 0 errors?', 11),
-#  ('array_free1_fail',      r'0 verified, 4 errors?', 11),
-#  ('array_free2',           r'1 verified, 0 errors?', 11),
-#  ('array_free2_fail',      r'0 verified, 5 errors?', 11),
-  ('lock',                  r'1 verified, 0 errors?', 2),
-  ('lock_fail',             r'0 verified, 1 errors?', 2),
-  ('ase_example',           r'1 verified, 0 errors?', 11),
-  ('ase_example_fail',      r'0 verified, 1 errors?', 11),
-  ('two_arrays',            r'1 verified, 0 errors?', 2),
-  ('two_arrays1',           r'1 verified, 0 errors?', 2),
-  ('two_arrays2',           r'1 verified, 0 errors?', 2),
-  ('two_arrays3',           r'1 verified, 0 errors?', 2),
-  ('two_arrays4',           r'1 verified, 0 errors?', 2),
-  ('two_arrays5',           r'1 verified, 0 errors?', 2),
-  ('two_arrays6',           r'1 verified, 0 errors?', 2),
-  ('two_arrays6_fail',      r'0 verified, 1 errors?', 2)
-]
+OVERRIDE_FIELDS = ['verifiers', 'memory', 'time-limit', 'skip']
+APPEND_FIELDS = ['flags']
 
 def red(text):
   return '\033[0;31m' + text + '\033[0m'
@@ -94,37 +18,137 @@ def red(text):
 def green(text):
   return '\033[0;32m' + text + '\033[0m'
 
-def runtests():
-  passed = failed = 0
-  for test in tests:
-    
-    for mem in ['no-reuse', 'no-reuse-impls', 'reuse']:
-    
-      print "{0:>20} {1:>16}:".format(test[0], "(" + mem + ")"),
+def get_result(output):
+  if re.search(r'[1-9]\d* time out|Z3 ran out of resources|z3 timed out|Corral timed out', output):
+    return 'timeout'
+  elif re.search(r'[1-9]\d* verified, 0 errors?|no bugs', output):
+    return 'verified'
+  elif re.search(r'0 verified, [1-9]\d* errors?|can fail', output):
+    return 'error'
+  else:
+    return 'unknown'
 
-      # invoke SMACK
-      t0 = time.time()
-      p = subprocess.Popen(['smackverify.py', test[0] + '.c', '--verifier=boogie-inline',
-                            '--unroll=' + str(test[2]), '--mem-mod=' + mem, '-o', test[0] +'.bpl'],
-                            stdout=subprocess.PIPE)
-      
-      smackOutput = p.communicate()[0]
-      elapsed = time.time() - t0
+def merge(metadata, yamldata):
 
-      # check SMACK output
-      if re.search(test[1], smackOutput):
-        print green('PASSED') + '  [%.2fs]' % round(elapsed, 2)
-        passed += 1
+  for key in OVERRIDE_FIELDS:
+    if key in yamldata:
+      metadata[key] = yamldata[key]
+
+  for key in APPEND_FIELDS:
+    if key in yamldata:
+      if key in metadata:
+        metadata[key] += yamldata[key]
       else:
-        print red('FAILED')
-        failed += 1
+        metadata[key] = yamldata[key]
+
+def metadata(file):
+  m = {}
+  prefix = []
+
+  for d in path.dirname(file).split('/'):
+    prefix += [d]
+    yaml_file = path.join(*(prefix + ['config.yml']))
+    if path.isfile(yaml_file):
+      with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
+        merge(m,data)
+
+  with open(file, "r") as f:
+    for line in f.readlines():
+
+      match = re.search(r'@skip', line)
+      if match:
+        m['skip'] = True
+
+      match = re.search(r'@flag (.*)',line)
+      if match:
+        m['flags'] += [match.group(1).strip()]
+
+      match = re.search(r'@expect (.*)',line)
+      if match:
+        m['expect'] = match.group(1).strip()
+
+  if not m['skip'] and not 'expect' in m:
+    print red("WARNING: @expect MISSING IN %s" % file)
+    m['expect'] = 'verified'
+
+  return m
   
-  return passed, failed
+parser = argparse.ArgumentParser()
+parser.add_argument("--exhaustive", help="be exhaustive", action="store_true")
+args = parser.parse_args()
 
-if __name__ == '__main__':
+print "Running regression tests..."
+print
 
-  passed, failed = runtests()
+passed = failed = timeouts = unknowns = 0
+
+try:
+  for test in glob.glob("./**/*.c"):
+    meta = metadata(test)
+
+    if meta['skip'] == True:
+      continue
+
+    if meta['skip'] != False and not args.exhaustive:
+      continue
+
+    print "{0:>20}".format(test)
+    sys.stdout.flush()
+
+    cmd = ['smackverify.py', test]
+    cmd += ['--time-limit', str(meta['time-limit'])]
+    cmd += ['-o', path.splitext(test)[0] + '.bpl']
+    cmd += meta['flags']
+
+    for memory in meta['memory'][:100 if args.exhaustive else 1]:
+      cmd += ['--mem-mod=' + memory]
+
+      for verifier in meta['verifiers'][:100 if args.exhaustive else 1]:
+        cmd += ['--verifier=' + verifier]
+
+        print "{0:>20} {1:>10}    :".format(memory, verifier),
+
+        try:
+          t0 = time.time()
+          p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          out, err  = p.communicate()
+          elapsed = time.time() - t0
+
+        except OSError:
+          print >> sys.stderr
+          sys.exit("Error executing command:\n%s" % " ".join(cmd))
+
+        result = get_result(out+err)
+
+        if result == meta['expect']:
+          print green('PASSED '),
+          passed += 1
+
+        elif result == 'timeout':
+          print red('TIMEOUT'),
+          timeouts += 1
+
+        elif result == 'unknown':
+          print red('UNKNOWN'),
+          unknowns += 1
+
+        else:
+          print red('FAILED '),
+          failed += 1
+
+        print '  [%.2fs]' % round(elapsed, 2)
+        sys.stdout.flush()
   
-  print '\nPASSED count: ', passed
-  print 'FAILED count: ', failed
+except KeyboardInterrupt:
+  pass
 
+print
+print ' PASSED count:', passed
+print ' FAILED count:', failed
+
+if timeouts > 0:
+  print 'TIMEOUT count:', timeouts
+
+if unknowns > 0:
+  print 'UNKNOWN count:', unknowns

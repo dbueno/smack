@@ -22,6 +22,7 @@
 #include "llvm/Pass.h"
 
 #include <set>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -40,6 +41,8 @@ namespace dsa {
 //
 template<class dsa>
 struct TypeSafety : public ModulePass {
+  typedef std::unordered_map<unsigned, bool> FieldMap;
+  typedef std::unordered_map<const DSNode *, FieldMap> NodeMap;
   protected:
     // Methods
     DSNodeHandle getDSNodeHandle (const Value * V, const Function * F);
@@ -47,13 +50,15 @@ struct TypeSafety : public ModulePass {
     void findTypeSafeDSNodes (const DSGraph * Graph);
     bool isTypeSafe (const DSNode * N);
     bool typeFieldsOverlap (const DSNode * N);
+    void fieldMapUpdate(const DSNode * N);
 
     // Pointers to prerequisite passes
-    DataLayout * TD;
+    const DataLayout * TD;
     dsa * dsaPass;
 
     // Data structures
     std::set<const DSNode *> TypeSafeNodes;
+    NodeMap NodeInfo;
 
   public:
     static char ID;
@@ -65,7 +70,7 @@ struct TypeSafety : public ModulePass {
     }
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.addRequired<DataLayout>();
+      AU.addRequired<DataLayoutPass>();
       AU.addRequired<dsa>();
       AU.setPreservesAll();
     }
@@ -78,6 +83,8 @@ struct TypeSafety : public ModulePass {
     // Methods for clients to use
     virtual bool isTypeSafe (const Value * V, const Function * F);
     virtual bool isTypeSafe (const GlobalValue * V);
+    virtual bool isFieldDisjoint(const Value * V, const Function *F);
+    virtual bool isFieldDisjoint(const GlobalValue * V, unsigned offset);
 };
 
 }

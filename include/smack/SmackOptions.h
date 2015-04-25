@@ -1,6 +1,4 @@
 //
-// Copyright (c) 2013 Zvonimir Rakamaric (zvonimir@cs.utah.edu),
-//                    Michael Emmi (michael.emmi@gmail.com)
 // This file is distributed under the MIT License. See LICENSE for details.
 //
 
@@ -16,6 +14,8 @@ public:
   static const llvm::cl::opt<bool> MemoryModelImpls;
   
   static const llvm::cl::opt<bool> SourceLocSymbols;
+  static const llvm::cl::opt<bool> BitPrecise;
+  static const llvm::cl::opt<bool> NoByteAccessInference;
 };
 }
 
