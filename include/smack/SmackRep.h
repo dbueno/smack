@@ -54,7 +54,6 @@ protected:
   Naming& naming;
   Program& program;
   vector<string> bplGlobals;
-  std::map< const llvm::Value *, unsigned > regionOfValue;
 
   struct Region {
     const llvm::Value* representative;
@@ -65,6 +64,7 @@ protected:
   };
 
   vector<Region> memoryRegions;
+  std::map<const llvm::Value *, unsigned> regionOfValue; // index into memoryRegions
   const llvm::DataLayout* targetData;
   unsigned ptrSizeInBits;
 

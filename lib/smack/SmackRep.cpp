@@ -164,9 +164,9 @@ unsigned SmackRep::getRegion(const llvm::Value* v) {
     );
   }
 
-  regionOfValue[v] = r;
 
   memoryRegions[r].isAllocated = memoryRegions[r].isAllocated || aliasAnalysis->isAlloced(v);
+  regionOfValue[v] = r;
   return r;
 }
 
@@ -770,6 +770,10 @@ string SmackRep::getPrelude() {
     s << "add_memory_region(\"" << memReg(i) 
       << "\", \"" << getPtrType() << "\", \"" << getPtrType() << "\")" << endl;
   }
+  s << endl;
+  s << "# Size of regionOfValue: " << regionOfValue.size() << endl;
+  naming.enter();
+  for (std::map<const llvm::Value *, unsigned>::iterator
   for (std::map<const llvm::Value*, unsigned >::iterator
         IT = regionOfValue.begin(), IE = regionOfValue.end(); IT != IE; ++IT) {
       const llvm::Value *v = IT->first;
@@ -778,6 +782,7 @@ string SmackRep::getPrelude() {
       e->print(s);
       s << ")" << endl;
   }
+  naming.leave();
   s << endl;
 
   if (uniqueUndefNum > 0) {
