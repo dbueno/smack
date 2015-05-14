@@ -378,6 +378,7 @@ const Expr* SmackRep::ptrArith(const llvm::Value* p, vector<llvm::Value*> ps, ve
 
 const Expr* SmackRep::expr(const llvm::Value* v) {
   using namespace llvm;
+  
 
   if (const GlobalValue* g = dyn_cast<const GlobalValue>(v)) {
     assert(g->hasName());
@@ -437,6 +438,8 @@ const Expr* SmackRep::expr(const llvm::Value* v) {
     DEBUG(errs() << "VALUE : " << *v << "\n");
     assert(false && "value of this type not supported");
   }
+  
+  //regionOfValue[expr(v)] = r;
 }
 
 string SmackRep::getString(const llvm::Value* v) {
@@ -649,22 +652,22 @@ vector<string> SmackRep::decl(llvm::Function* F) {
 
     else {
       stringstream decl;
-      decl << "procedure " << naming.get(*F);
+      decl << "Procedure(\"" << naming.get(*F) << "";
 
       if (F->isVarArg())
         for (unsigned i = 0; i < U->getNumOperands()-1; i++)
           decl << "." << type(U->getOperand(i)->getType());
 
-      decl << "(";
+      decl << "\", params=[";
       for (unsigned i = 0; i < U->getNumOperands()-1; i++) {
         if (i > 0)
           decl << ", ";
-        decl << "p" << i << ":" << type(U->getOperand(i)->getType());
+        decl << "(\"p" << i << "\", \"" << type(U->getOperand(i)->getType()) << "\")";
       }
-      decl << ")";
+      decl << "]";
       if (!F->getReturnType()->isVoidTy())
-        decl << " returns (r: " << type(F->getReturnType()) << ")";
-      decl << ";";
+        decl << ", rets=[(\"r\", \"" << type(F->getReturnType()) << "\")]";
+      decl << ")";
       decls.push_back(decl.str());
 
     }
@@ -763,18 +766,21 @@ string SmackRep::code(llvm::CallInst& ci) {
 string SmackRep::getPrelude() {
   ostringstream s;
   s << endl;
+  s << "##### Prelude" << endl;
   s << "# Memory region declarations";
   s << ": " << memoryRegions.size() << endl;
   for (unsigned i=0; i<memoryRegions.size(); ++i) {
-#if HEAD
-    s << "add_memory_region(\"" << memReg(i) 
-      << "\", \"" << getPtrType() << "\", \"" << getPtrType() << "\")" << endl;
+    unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+    for (unsigned j = 0; j < n; j++) {
+      unsigned size = 8 << j;
+      s << "add_memory_region(\"" << memPath(i, size) << "\", \""
+        << memType(i, size) << "\")" << endl;
+    }
   }
   s << endl;
   s << "# Size of regionOfValue: " << regionOfValue.size() << endl;
   naming.enter();
   for (std::map<const llvm::Value *, unsigned>::iterator
-  for (std::map<const llvm::Value*, unsigned >::iterator
         IT = regionOfValue.begin(), IE = regionOfValue.end(); IT != IE; ++IT) {
       const llvm::Value *v = IT->first;
       const Expr *e = expr(v);
@@ -784,68 +790,69 @@ string SmackRep::getPrelude() {
   }
   naming.leave();
   s << endl;
-
-  if (uniqueUndefNum > 0) {
-    s << "# Undefined values" << endl;
-    for (unsigned i=0; i<uniqueUndefNum; i++)
-      s << "add_undef('$u." << i << "', '" << getPtrType() << "')" << endl;  
-    s << endl;
-#endif
-    unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
-    for (unsigned j = 0; j < n; j++) {
-      unsigned size = 8 << j;
-      s << "var " << memPath(i, size) 
-        << ": " << memType(i, size) 
-        << ";" << endl;
-    }
-  }
-  s << endl;
-  s << "// Type declarations" << endl;
+  s << "# Type declarations" << endl;
   for (unsigned i = 1; i <= 64; i <<= 1) {
-    s << "type " << int_type(i) << " = " << bits_type(i) << ";" << endl; 
+    s << "add_type(\"" << int_type(i) << "\", \"" << bits_type(i) << "\")" << endl; 
   }
-  s << "type ref = " << bits_type(ptrSizeInBits) << ";" << endl;
-  s << "type size = " << bits_type(ptrSizeInBits) << ";" << endl;
+  s << "add_type(\"ref\", \"" << bits_type(ptrSizeInBits) << "\")" << endl;
+  s << "add_type(\"size\", \"" << bits_type(ptrSizeInBits) << "\")" << endl;
   s << endl;
 
-  s << "axiom " << NULL_VAL << " == ";
+  s << "add_constant('" << NULL_VAL << "', 'i" << ptrSizeInBits << "')" << endl;
+  s << "add_axiom(EqExpr(VarExpr(\"" << NULL_VAL << "\"),";
   lit(0u,ptrSizeInBits)->print(s);
-  s << ";" << endl;
+  s << "))" << endl;
 
-  s << "axiom " << GLOBALS_BOTTOM << " == ";
+  s << "add_axiom(EqExpr(VarExpr(\"" << GLOBALS_BOTTOM << "\"), ";
   lit(globalsBottom, ptrSizeInBits)->print(s);
-  s << ";" << endl;
+  s << "))" << endl;
 
-  s << "axiom " << EXTERNS_BOTTOM << " == ";
+  s << "add_axiom(EqExpr(VarExpr(\"" << EXTERNS_BOTTOM << "\"), ";
   lit(externsBottom, ptrSizeInBits)->print(s);
-  s << ";" << endl;
+  s << "))" << endl;
 
-  s << "axiom " << MALLOC_TOP << " == ";
+  s << "add_axiom(EqExpr(VarExpr(\"" << MALLOC_TOP << "\"), ";
   lit((unsigned)(INT_MAX - 10485760),ptrSizeInBits)->print(s);
-  s << ";" << endl;
+  s << "))" << endl;
 
   for (unsigned i = 1; i < 8; ++i) {
-    s << "axiom $" << i << ".ref == ";
+    s << "add_constant('$" << i << ".ref', 'i" << ptrSizeInBits << "')" << endl;
+    s << "add_axiom(EqExpr(VarExpr(\"$" << i << ".ref\"), ";
     lit(i,ptrSizeInBits)->print(s);
-    s << ";" << endl;
+    s << "))" << endl;
   }
   s << endl;
 
-  s << "add_constant(\"$GLOBALS_BOTTOM\", \"int\")\n";
+  s << "add_constant(\"" << GLOBALS_BOTTOM << "\", \"i" << ptrSizeInBits << "\")\n";
+  s << "add_constant(\"" << EXTERNS_BOTTOM << "\", \"i" << ptrSizeInBits << "\")\n";
+  s << "add_constant(\"" << MALLOC_TOP << "\", \"i" << ptrSizeInBits << "\")\n";
 
-  s << "add_axiom(Eq(\"$GLOBALS_BOTTOM\", Num(" << globalsBottom << ")))" << endl;
-  s << "function {:inline} $zext.i32.ref(p: i32) returns (ref) {" << ((ptrSizeInBits == 32)? "p}" : "$zext.i32.i64(p)}") << endl;
+  s << "Procedure(\"$zext.i32.ref\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", \"ref\")], blocks=[" << endl;
+  s << "  Block([AssignStmt([VarExpr(\"r\")], ";
+  s << ((ptrSizeInBits == 32) ? "'p'" : "CallStmt(\"$zext.i32.i64\", [VarExpr(\"p\")])") << "), ReturnStmt()])])" << endl;
 
   for (unsigned i = 8; i <= 64; i <<= 1) {
     if (i < ptrSizeInBits) {
-      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$trunc", {ptrSizeInBits, i}) << "(p)}" << endl;
-      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$zext", {i, ptrSizeInBits}) << "(p)}" << endl;
+      s << "Procedure(\"" << opName("$p2i", {i}) << "\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [CallStmt(\"" << opName("$trunc", {ptrSizeInBits, i}) << "\", [VarExpr(\"p\")])])])])" << endl;
+      s << "Procedure(\"" << opName("$i2p", {i}) << "\", inline=True, params=[(\"p\", 'ref')], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [CallStmt(\"" << opName("$zext", {i, ptrSizeInBits}) << "\", [VarExpr(\"p\")])])])])" << endl;
     } else if (i > ptrSizeInBits) {
-      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {" << opName("$zext", {ptrSizeInBits, i}) << "(p)}" << endl;
-      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {" << opName("$trunc", {i, ptrSizeInBits}) << "(p)}" << endl;
+      s << "Procedure(\"" << opName("$p2i", {i}) << "\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [CallStmt(\"" << opName("$zext", {ptrSizeInBits, i}) << "\", [VarExpr(\"p\")])])])])" << endl;
+      s << "Procedure(\"" << opName("$i2p", {i}) << "\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [CallStmt(\"" << opName("$trunc", {i, ptrSizeInBits}) << "\", [VarExpr(\"p\")])])])])" << endl;
     } else {
-      s << "function {:inline}" << opName("$p2i", {i}) << "(p: ref) returns (" << int_type(i) << ") {p}" << endl;
-      s << "function {:inline}" << opName("$i2p", {i}) << "(p: " << int_type(i) << ") returns (ref) {p}" << endl;
+      s << "Procedure(\"" << opName("$p2i", {i}) << "\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [VarExpr(\"p\")])])])" << endl;
+      s << "Procedure(\"" << opName("$i2p", {i}) << "\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", '" << int_type(i)
+        << "')], blocks=[" << endl
+        << "  Block([AssignStmt([VarExpr(\"r\")], [VarExpr(\"p\")])])])" << endl;
     }
   }
   s << endl;
@@ -1053,77 +1060,82 @@ string SmackRep::memcpyProc(llvm::Function* F, int dstReg, int srcReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  s << "procedure " << naming.get(*F) << ".r" << dstReg << ".r" << srcReg;
-  s << "(dest: ref, src: ref, len: size, align: i32, isvolatile: i1)";
-  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
+  s << "Procedure(\"" << naming.get(*F) << ".r" << dstReg << ".r" << srcReg << "\", ";
+  s << "inline=True, params=[(\"dest\", \"ref\"), (\"src\", \"ref\"), (\"len\", \"size\")], attrs=[(\"align\", \"i32\"), (\"isvolatile\", \"i1\")]";
+  s << (SmackOptions::MemoryModelImpls ? "" : ")");
 
-  for (unsigned i = 0; i < n; ++i)
-    s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
+  //for (unsigned i = 0; i < n; ++i)
+  //  s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
 
   if (SmackOptions::MemoryModelImpls) {
-    s << "{" << endl;
+    s << "," << endl;
+    s << "blocks=[";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "  var $oldSrc" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
-      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+      s << "  VarDecl(\"$oldSrc" << ".i" << size << "\", \"[" << getPtrType() << "] " << int_type(size) << "\")," << endl;
+      s << "  VarDecl(\"$oldDst" << ".i" << size << "\", \"[" << getPtrType() << "] " << int_type(size) << "\")," << endl;
     }
+    s << "Block([" << endl;
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "  $oldSrc" << ".i" << size << " := " << memPath(srcReg, size) << ";" << endl;
-      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "  AssignStmt([VarExpr(\"$oldSrc" << ".i" << size << "\")], [VarExpr(\"" << memPath(srcReg, size) << "\")])," << endl;
+      s << "  AssignStmt([VarExpr(\"$oldDst" << ".i" << size << "\")], [VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
+      s << "  HavocStmt([VarExpr(\"" << memPath(dstReg, size) << "\")])" << endl;
+      s << "  #assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == $oldSrc" << ".i" << size << "[$add.ref($sub.ref(src, dest), x)]);" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "  #assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
     }
-    s << "}" << endl;
+    s << "]" << endl;
   } else {
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "#ensures (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(srcReg, size) << ")[$add.ref($sub.ref(src, dest), x)]);" 
         << endl;
-      s << "ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "#ensures (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == old(" << memPath(dstReg, size) << ")[x]);" << endl;
     }
   }
+  s << ")])" << endl;
 
   return s.str();
 }
+
 
 string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
   stringstream s;
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
-  s << "procedure " << naming.get(*F) << ".r" << dstReg;
-  s << "(dest: ref, val: i8, len: size, align: i32, isvolatile: i1)";
-  s << (SmackOptions::MemoryModelImpls ? "" : ";") << endl;
+  s << "Procedure(\"" << naming.get(*F) << ".r" << dstReg << "\", ";
+  s << "params=[(\"dest\", \"ref\"), (\"val\", \"i8\"), (\"len\", \"size\"), (\"align\", \"i32\"), (\"isvolatile\", \"i1\")]";
+  s << (SmackOptions::MemoryModelImpls ? "" : ")") << endl;
 
-  for (unsigned i = 0; i < n; ++i)
-    s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
+  //for (unsigned i = 0; i < n; ++i)
+  //  s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
 
   if (SmackOptions::MemoryModelImpls) {
-    s << "{" << endl;
+    s << ", blocks=[" << endl;
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "  var $oldDst" << ".i" << size << " : [" << getPtrType() << "] " << int_type(size) << ";" << endl;
+      s << "  VarDecl(\"$oldDst" << ".i" << size << "\", \"[" << getPtrType() << "] " << int_type(size) << "\")," << endl;
     }
+    s << "Block([" << endl;
 
     string val = "val";
     for (unsigned i = 0; i < n; ++i) {
       unsigned size = 8 << i;
-      s << "  $oldDst" << ".i" << size << " := " << memPath(dstReg, size) << ";" << endl;
-      s << "  havoc " << memPath(dstReg, size) << ";" << endl;
-      s << "  assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
+      s << "  AssignStmt([VarExpr(\"$oldDst" << ".i" << size << "\")], [VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
+      s << "  HavocStmt([VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
+      s << "  #assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
         << ");" << endl;
-      s << "  assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
+      s << "  #assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
-    s << "}" << endl;
+    s << "])])" << endl;
   } else {
       s << "Procedure(\"$memset." << dstReg << "\", params=[('dest', 'int'), ('val', 'int'), ('len', 'int'), ('align', 'int'), ('isvolatile', 'bool')])";
   }

@@ -372,55 +372,55 @@ void BinExpr::print(ostream& os) const {
   // os << "(" << lhs << " ";
   switch (op) {
   case Iff:
-    os << "Iff";
+    os << "IffExpr";
     break;
   case Imp:
-    os << "Implies";
+    os << "ImpliesExpr";
     break;
   case Or:
-    os << "Or";
+    os << "OrExpr";
     break;
   case And:
-    os << "And";
+    os << "AndExpr";
     break;
   case Eq:
-    os << "Eq";
+    os << "EqExpr";
     break;
   case Neq:
-    os << "Neq";
+    os << "NeqExpr";
     break;
   case Lt:
-    os << "LT";
+    os << "LTExpr";
     break;
   case Gt:
-    os << "GT";
+    os << "GTExpr";
     break;
   case Lte:
-    os << "LTE";
+    os << "LTEExpr";
     break;
   case Gte:
-    os << "GTE";
+    os << "GTEExpr";
     break;
   case Sub:
     os << "<:";
     break;
   case Conc:
-    os << "Concat";
+    os << "ConcatExpr";
     break;
   case Plus:
-    os << "Plus";
+    os << "PlusExpr";
     break;
   case Minus:
-    os << "Minus";
+    os << "MinusExpr";
     break;
   case Times:
-    os << "Times";
+    os << "TimesExpr";
     break;
   case Div:
-    os << "Div";
+    os << "DivExpr";
     break;
   case Mod:
-    os << "Mod";
+    os << "ModExpr";
     break;
   }
   os << "(" << lhs << ", " << rhs << ")";
@@ -437,15 +437,18 @@ void FunExpr::print(ostream& os) const {
 }
 
 void BoolLit::print(ostream& os) const {
-  os << (val ? "BoolVal(True)" : "BoolVal(False)");
+  os << (val ? "Bool(True)" : "Bool(False)");
 }
 
 void IntLit::print(ostream& os) const {
-  os << val;
+  os << "Num(" << val << ")";
 }
 
 void BvLit::print(ostream& os) const {
-  os << "BitVec(" << val << ", " << width << ")";
+  if (width == 1)
+    os << "Bool(True if " << val << " else False)";
+  else
+    os << "BitVecLit(" << val << ", " << width << ")";
 }
 
 void NegExpr::print(ostream& os) const {
@@ -552,7 +555,7 @@ void GotoStmt::print(ostream& os) const {
 
 void HavocStmt::print(ostream& os) const {
   os << "HavocStmt([";
-  print_seq<string>(os, vars, ", ");
+  print_seq<string>(os, vars, "\"", "\", \"", "\"");
   os << "])";
 }
 
