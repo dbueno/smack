@@ -279,8 +279,8 @@ Decl* Decl::constant(string name, string type, bool unique) {
 Decl* Decl::constant(string name, string type, vector<const Attr*> ax, bool unique) {
   return new ConstDecl(name, type, ax, unique);
 }
-Decl* Decl::variable(string name, string type) {
-  return new VarDecl(name, type);
+Decl* Decl::variable(string name, string type, string region) {
+  return new VarDecl(name, type, region);
 }
 Decl* Decl::procedure(Program& p, string name) {
   return procedure(p,name,vector< pair<string,string> >(),vector< pair<string,string> >());
@@ -611,7 +611,9 @@ void FuncDecl::print(ostream& os) const {
 }
 
 void VarDecl::print(ostream &os) const {
-    os << "VarDecl(\"" << name << "\", \"" << type << "\"";
+    os << "VarDecl(\"" << name << "\", '" << type << "'";
+    if (!region.empty())
+        os << ", " << "'$M." << region << "'";
     if (attrs.size() > 0)
         print_seq<const Attr*>(os, attrs, ", [", ", ", "]");
     os << ")";

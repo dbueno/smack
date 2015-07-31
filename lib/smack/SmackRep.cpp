@@ -778,18 +778,6 @@ string SmackRep::getPrelude() {
     }
   }
   s << endl;
-  s << "# Size of regionOfValue: " << regionOfValue.size() << endl;
-  naming.enter();
-  for (std::map<const llvm::Value *, unsigned>::iterator
-        IT = regionOfValue.begin(), IE = regionOfValue.end(); IT != IE; ++IT) {
-      const llvm::Value *v = IT->first;
-      const Expr *e = expr(v);
-      s << "add_ptr_to_region(\"" << memReg(IT->second) << "\", ";
-      e->print(s);
-      s << ")" << endl;
-  }
-  naming.leave();
-  s << endl;
   s << "# Type declarations" << endl;
   for (unsigned i = 1; i <= 64; i <<= 1) {
     s << "add_type(\"" << int_type(i) << "\", \"" << bits_type(i) << "\")" << endl; 
@@ -828,8 +816,8 @@ string SmackRep::getPrelude() {
   s << "add_constant(\"" << MALLOC_TOP << "\", \"i" << ptrSizeInBits << "\")\n";
 
   s << "Procedure(\"$zext.i32.ref\", inline=True, params=[(\"p\", \"ref\")], rets=[(\"r\", \"ref\")], blocks=[" << endl;
-  s << "  Block([AssignStmt([VarExpr(\"r\")], ";
-  s << ((ptrSizeInBits == 32) ? "'p'" : "CallStmt(\"$zext.i32.i64\", [VarExpr(\"p\")])") << "), ReturnStmt()])])" << endl;
+  s << "  Block([AssignStmt([VarExpr(\"r\")], [";
+  s << ((ptrSizeInBits == 32) ? "'p'" : "CallStmt(\"$zext.i32.i64\", [VarExpr(\"p\")])") << "]), ReturnStmt()])])" << endl;
 
   for (unsigned i = 8; i <= 64; i <<= 1) {
     if (i < ptrSizeInBits) {

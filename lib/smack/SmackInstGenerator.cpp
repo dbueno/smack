@@ -59,7 +59,12 @@ void SmackInstGenerator::nameInstruction(llvm::Instruction& inst) {
   if (inst.getType()->isVoidTy())
     return;
 
-  addDecl(Decl::variable(naming.get(inst), rep.type(&inst)));
+  std::string r = "";
+  if (inst.getType()->isPointerTy()) {
+      DEBUG(errs() << "nameInstruction: " << inst);
+      r = std::to_string(rep.getRegion(&inst));
+  }
+  addDecl(Decl::variable(naming.get(inst), rep.type(&inst), r));
 }
 
 void SmackInstGenerator::annotate(llvm::Instruction& I, Block* B) {

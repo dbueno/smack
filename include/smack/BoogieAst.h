@@ -328,7 +328,7 @@ public:
   static Decl* constant(string name, string type);
   static Decl* constant(string name, string type, bool unique);
   static Decl* constant(string name, string type, vector<const Attr*> ax, bool unique);
-  static Decl* variable(string name, string type);
+  static Decl* variable(string name, string type, string region);
   static Decl* procedure(Program& p, string name);
   static Decl* procedure(Program& p, string name,
     vector< pair<string,string> > args, vector< pair<string,string> > rets);
@@ -387,8 +387,9 @@ public:
 
 class VarDecl : public Decl {
   string type;
+  string region;
 public:
-  VarDecl(string n, string t) : Decl(n), type(t) {}
+  VarDecl(string n, string t, string r) : Decl(n), type(t), region(r) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
