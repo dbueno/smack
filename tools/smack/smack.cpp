@@ -102,6 +102,8 @@ int main(int argc, char **argv) {
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
 
   pass_manager.add(new smack::PruneFunctionPass());
+  pass_manager.add(llvm::createAggressiveDCEPass());
+  pass_manager.add(llvm::createGlobalDCEPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   pass_manager.add(llvm::createCFGSimplificationPass());
   pass_manager.add(llvm::createInternalizePass());
