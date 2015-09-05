@@ -395,9 +395,10 @@ public:
 };
 
 class Block {
+public:
   string name;
   vector<const Stmt*> stmts;
-public:
+
   Block() : name("") {}
   Block(string n) : name(n) {}
   void print(ostream& os) const;
@@ -413,13 +414,13 @@ public:
 };
 
 class CodeContainer {
-protected:
+public:
   Program& prog;
   set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
   vector<string> mods;
   CodeContainer(Program& p) : prog(p) {}
-public:
+
   Program& getProg() const {
     return prog;
   }
