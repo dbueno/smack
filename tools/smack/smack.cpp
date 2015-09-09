@@ -27,6 +27,7 @@
 #include "assistDS/SimplifyInsertValue.h"
 
 #include <iostream>
+smack::SmackModuleGenerator *runSmack(string input);
 
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
@@ -48,6 +49,7 @@ std::string getFileName(const std::string &str) {
     filename = str.substr(0, lastdot);  
   return filename; 
 }
+
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
