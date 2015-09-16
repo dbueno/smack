@@ -414,11 +414,12 @@ public:
 class CodeContainer {
 protected:
   Program& prog;
+  CodeContainer(Program& p) : prog(p) {}
+public:
   set<Decl*,DeclCompare> decls;
   vector<Block*> blocks;
   vector<string> mods;
-  CodeContainer(Program& p) : prog(p) {}
-public:
+
   Program& getProg() const {
     return prog;
   }
@@ -451,11 +452,12 @@ public:
 };
 
 class ProcDecl : public Decl, public CodeContainer {
+public:
   vector< pair<string,string> > params;
   vector< pair<string,string> > rets;
   vector<const Expr*> requires;
   vector<const Expr*> ensures;
-public:
+  
   ProcDecl(Program& p, string n, vector< pair<string,string> > ps, vector< pair<string,string> > rs) 
     : Decl(n), CodeContainer(p), params(ps), rets(rs) {}
   kind getKind() const { return PROC; }
@@ -492,8 +494,14 @@ class Program {
 public:
   string prelude;
   set<Decl*,DeclCompare> decls;
+  vector<Decl*> preludeDecls;
   Program() {}
   void print(ostream& os) const;
+  void addPreludeDecls(vector<Decl*> decls) {
+    for (auto decl : decls) {
+      preludeDecls.push_back(decl);
+    }
+  }
   void addDecl(Decl* d) {
     decls.insert(d);
   }

@@ -758,6 +758,41 @@ string SmackRep::code(llvm::CallInst& ci) {
   return s;
 }
 
+vector<Decl*> SmackRep::getMemoryRegionDecls() {
+  vector<Decl*> ret;
+  for (unsigned i=0; i<memoryRegions.size(); ++i) {
+    unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
+    for (unsigned j = 0; j < n; j++) {
+      unsigned size = 8 << j;
+      ret.push_back(new VarDecl{memPath(i, size), memType(i, size)});
+    }
+  }
+  return ret;
+}
+
+vector<Decl*> SmackRep::getTypeDecls() {
+  vector<Decl*> ret;
+  for (unsigned i = 1; i <= 64; i <<= 1) {
+    ret.push_back(new TypeDecl{int_type(i), bits_type(i)});
+  }
+  ret.push_back(new TypeDecl{"ref", bits_type(ptrSizeInBits)});
+  ret.push_back(new TypeDecl{"size", bits_type(ptrSizeInBits)});
+  return ret;
+}
+
+vector<Decl*> SmackRep::getAxiomDecls() {
+  vector<Decl*> ret;
+  ret.push_back(new AxiomDecl{Expr::eq(Expr::id(NULL_VAL), lit(0u,ptrSizeInBits))});
+  ret.push_back(new AxiomDecl{Expr::eq(Expr::id(GLOBALS_BOTTOM), lit(globalsBottom, ptrSizeInBits))});
+  ret.push_back(new AxiomDecl{Expr::eq(Expr::id(EXTERNS_BOTTOM), lit(externsBottom, ptrSizeInBits))});
+  ret.push_back(new AxiomDecl{Expr::eq(Expr::id(MALLOC_TOP), lit((unsigned)(INT_MAX - 10485760),ptrSizeInBits))});
+
+  for (unsigned i = 1; i < 8; ++i) {
+    ret.push_back(new AxiomDecl{Expr::eq(Expr::id("$" + to_string(i) + ".ref"), lit(i,ptrSizeInBits))});
+  }
+  return ret;
+}
+
 string SmackRep::getPrelude() {
   stringstream s;
   s << endl;

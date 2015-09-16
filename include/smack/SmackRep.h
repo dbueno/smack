@@ -189,6 +189,11 @@ public:
   virtual string getPtrType();
   virtual string getPrelude();
 
+  // DLB
+  vector<Decl*> getMemoryRegionDecls();
+  vector<Decl*> getTypeDecls();
+  vector<Decl*> getAxiomDecls();
+
   virtual const Expr* declareIsExternal(const Expr* e);
 
   virtual string memcpyProc(llvm::Function* F, int dstReg, int srcReg);

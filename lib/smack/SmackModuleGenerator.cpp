@@ -37,6 +37,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   SmackRep rep(&getAnalysis<DSAAliasAnalysis>(), naming, program);
   rep.collectRegions(m);
   
+  
   DEBUG(errs() << "Analyzing globals...\n");
 
   for (llvm::Module::const_global_iterator
@@ -122,6 +123,9 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
   program.appendPrelude(rep.getPrelude());
+  program.addPreludeDecls(rep.getTypeDecls());
+  program.addPreludeDecls(rep.getMemoryRegionDecls());
+  program.addPreludeDecls(rep.getAxiomDecls());
 }
 
 SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
