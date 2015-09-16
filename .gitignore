@@ -43,3 +43,4 @@ corraldebug.out
 build
 
 *.swp
+/install
