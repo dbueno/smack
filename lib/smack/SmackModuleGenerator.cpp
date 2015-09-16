@@ -5,6 +5,26 @@
 #include "smack/SmackModuleGenerator.h"
 #include "smack/SmackOptions.h"
 #include "smack/Contracts.h"
+#include "llvm/LinkAllPasses.h"
+#include "llvm/PassManager.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
+#include "assistDS/StructReturnToPointer.h"
+#include "assistDS/SimplifyExtractValue.h"
+#include "assistDS/SimplifyInsertValue.h"
+#include "smack/PruneFunctionPass.h"
+#include "smack/BplFilePrinter.h"
+#include "smack/DSAAliasAnalysis.h"
 
 namespace smack {
 
@@ -102,6 +122,76 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   // NOTE we must do this after instruction generation, since we would not 
   // otherwise know how many regions to declare.
   program.appendPrelude(rep.getPrelude());
+}
+
+SmackModuleGenerator *runSmack(string input) {
+  string OutputFilename{};
+  llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
+  //llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
+
+  //llvm::sys::PrintStackTraceOnErrorSignal();
+  //llvm::PrettyStackTraceProgram PSTP(argc, argv);
+  llvm::EnableDebugBuffering = true;
+
+  if (OutputFilename.empty()) {
+    OutputFilename = "a.bpl";
+  }
+ 
+  std::string error_msg;
+  llvm::SMDiagnostic err;
+  llvm::LLVMContext &context = llvm::getGlobalContext();  
+  std::unique_ptr<llvm::Module> module;
+  std::unique_ptr<llvm::tool_output_file> output;
+ 
+  module.reset(llvm::ParseIRFile(StringRef(input), err, context));
+  if (module.get() == 0) {
+    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
+    llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
+    if (llvm::errs().has_colors()) llvm::errs().resetColor();
+    return nullptr;
+  }
+ 
+  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
+  if (!error_msg.empty()) {
+    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
+    llvm::errs() << "error: " << error_msg << "\n";
+    if (llvm::errs().has_colors()) llvm::errs().resetColor();
+    return nullptr;
+  }
+ 
+  ///////////////////////////////
+  // initialise and run passes //
+  ///////////////////////////////
+
+  llvm::PassManager pass_manager;
+  llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
+  llvm::initializeAnalysis(Registry);
+ 
+  // add an appropriate DataLayout instance for the module
+  const llvm::DataLayout *dl = 0;
+  const std::string &moduleDataLayout = module.get()->getDataLayoutStr();
+  assert (!moduleDataLayout.empty());
+  dl = new llvm::DataLayout(moduleDataLayout);
+  if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
+
+  pass_manager.add(new smack::PruneFunctionPass());
+  pass_manager.add(llvm::createAggressiveDCEPass());
+  pass_manager.add(llvm::createGlobalDCEPass());
+  pass_manager.add(llvm::createLowerSwitchPass());
+  pass_manager.add(llvm::createCFGSimplificationPass());
+  pass_manager.add(llvm::createInternalizePass());
+  pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
+  pass_manager.add(new llvm::StructRet());
+  pass_manager.add(new llvm::SimplifyEV());
+  pass_manager.add(new llvm::SimplifyIV());
+  auto *ret = new smack::SmackModuleGenerator();
+  pass_manager.add(ret);
+  pass_manager.add(new smack::BplFilePrinter(output->os()));
+  pass_manager.run(*module.get());
+
+  output->keep();
+
+  return ret;
 }
 
 } // namespace smack

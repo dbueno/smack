@@ -47,6 +47,8 @@ public:
     return program;
   }
 };
+
+SmackModuleGenerator *runSmack(string input);
 }
 
 #endif // SMACKMODULEGENERATOR_H

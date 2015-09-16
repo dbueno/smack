@@ -489,9 +489,9 @@ class Program {
   // TODO While I would prefer that a program is just a set or sequence of
   // declarations, putting the Prelude in a CodeDeclaration does not work,
   // and I do not yet understand why; see below. --mje
+public:
   string prelude;
   set<Decl*,DeclCompare> decls;
-public:
   Program() {}
   void print(ostream& os) const;
   void addDecl(Decl* d) {
