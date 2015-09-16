@@ -124,7 +124,7 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
   program.appendPrelude(rep.getPrelude());
 }
 
-SmackModuleGenerator *runSmack(string input) {
+SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
   string OutputFilename{};
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   //llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
@@ -184,14 +184,14 @@ SmackModuleGenerator *runSmack(string input) {
   pass_manager.add(new llvm::StructRet());
   pass_manager.add(new llvm::SimplifyEV());
   pass_manager.add(new llvm::SimplifyIV());
-  auto *ret = new smack::SmackModuleGenerator();
-  pass_manager.add(ret);
-  pass_manager.add(new smack::BplFilePrinter(output->os()));
+  pass_manager.add(new smack::SmackModuleGenerator());
+  //pass_manager.add(new smack::BplFilePrinter(output->os()));
+  pass_manager.add(actionPass);
   pass_manager.run(*module.get());
 
   output->keep();
 
-  return ret;
+  return nullptr;
 }
 
 } // namespace smack

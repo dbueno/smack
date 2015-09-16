@@ -48,7 +48,7 @@ public:
   }
 };
 
-SmackModuleGenerator *runSmack(string input);
+SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass);
 }
 
 #endif // SMACKMODULEGENERATOR_H
