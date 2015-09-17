@@ -204,6 +204,20 @@ public:
 
 class Stmt {
 public:
+  enum class StmtKind {
+    Assert,
+    Assign,
+    Assume,
+    Call,
+    Comment,
+    Goto,
+    Havoc,
+    Return,
+    Code
+  };
+  const StmtKind kind;
+  Stmt(StmtKind kind) : kind(kind) {};
+
   static const Stmt* annot(vector<const Attr*> attrs);
   static const Stmt* annot(const Attr* a);
   static const Stmt* assert_(const Expr* e);
@@ -233,25 +247,25 @@ public:
 };
 
 class AssertStmt : public Stmt {
-  const Expr* expr;
 public:
-  AssertStmt(const Expr* e) : expr(e) {}
+  const Expr* expr;
+  AssertStmt(const Expr* e) : Stmt(StmtKind::Assert), expr(e) {}
   void print(ostream& os) const;
 };
 
 class AssignStmt : public Stmt {
+public:
   vector<const Expr*> lhs;
   vector<const Expr*> rhs;
-public:
-  AssignStmt(vector<const Expr*> lhs, vector<const Expr*> rhs) : lhs(lhs), rhs(rhs) {}
+  AssignStmt(vector<const Expr*> lhs, vector<const Expr*> rhs) : Stmt(StmtKind::Assign), lhs(lhs), rhs(rhs) {}
   void print(ostream& os) const;
 };
 
 class AssumeStmt : public Stmt {
+public:
   const Expr* expr;
   vector<const Attr*> attrs;
-public:
-  AssumeStmt(const Expr* e) : expr(e) {}
+  AssumeStmt(const Expr* e) : Stmt(StmtKind::Assume), expr(e) {}
   void add(const Attr* a) {
     attrs.push_back(a);
   }
@@ -259,49 +273,49 @@ public:
 };
 
 class CallStmt : public Stmt {
+public:
   string proc;
   vector<const Expr*> params;
   vector<string> returns;
   vector<const Attr*> attrs;
-public:
   CallStmt(string p, vector<const Expr*> ps, vector<string> rs, 
     vector<const Attr*> ax)
-    : proc(p), params(ps), returns(rs), attrs(ax) {}
+    : Stmt(StmtKind::Call), proc(p), params(ps), returns(rs), attrs(ax) {}
   void print(ostream& os) const;
 };
 
 class Comment : public Stmt {
-  string str;
 public:
-  Comment(string s) : str(s) {}
+  string str;
+  Comment(string s) : Stmt(StmtKind::Comment), str(s) {}
   void print(ostream& os) const;
 };
 
 class GotoStmt : public Stmt {
-  vector<string> targets;
 public:
-  GotoStmt(vector<string> ts) : targets(ts) {}
+  vector<string> targets;
+  GotoStmt(vector<string> ts) : Stmt(StmtKind::Goto), targets(ts) {}
   void print(ostream& os) const;
 };
 
 class HavocStmt : public Stmt {
-  vector<string> vars;
 public:
-  HavocStmt(vector<string> vs) : vars(vs) {}
+  vector<string> vars;
+  HavocStmt(vector<string> vs) : Stmt(StmtKind::Havoc), vars(vs) {}
   void print(ostream& os) const;
 };
 
 class ReturnStmt : public Stmt {
-  const Expr* expr;
 public:
-  ReturnStmt(const Expr* e = nullptr) : expr(e) {}
+  const Expr* expr;
+  ReturnStmt(const Expr* e = nullptr) : Stmt(StmtKind::Return), expr(e) {}
   void print(ostream& os) const;
 };
 
 class CodeStmt : public Stmt {
-  string code;
 public:
-  CodeStmt(string s) : code(s) {}
+  string code;
+  CodeStmt(string s) : Stmt(StmtKind::Code), code(s) {}
   void print(ostream& os) const;
 };
 
@@ -395,8 +409,9 @@ public:
 
 class Block {
   string name;
-  vector<const Stmt*> stmts;
 public:
+  vector<const Stmt*> stmts;
+
   Block() : name("") {}
   Block(string n) : name(n) {}
   void print(ostream& os) const;
