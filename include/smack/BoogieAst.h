@@ -246,6 +246,21 @@ public:
   virtual void print(ostream& os) const = 0;
 };
 
+inline std::ostream &operator<<(std::ostream &str, Stmt::StmtKind &kind) {
+  switch (kind) {
+    case Stmt::StmtKind::Assert: str << "Assert"; break;
+    case Stmt::StmtKind::Assign: str << "Assign"; break;
+    case Stmt::StmtKind::Assume: str << "Assume"; break;
+    case Stmt::StmtKind::Call: str << "Call"; break;
+    case Stmt::StmtKind::Comment: str << "Comment"; break;
+    case Stmt::StmtKind::Goto: str << "Goto"; break;
+    case Stmt::StmtKind::Havoc: str << "Havoc"; break;
+    case Stmt::StmtKind::Return: str << "Return"; break;
+    case Stmt::StmtKind::Code: str << "Code"; break;
+  }
+  return str;
+}
+
 class AssertStmt : public Stmt {
 public:
   const Expr* expr;
