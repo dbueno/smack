@@ -29,6 +29,9 @@
 #include <iostream>
 smack::SmackModuleGenerator *runSmack(string input);
 
+static llvm::cl::opt<bool>
+PruneSSLFunctions("prune-ssl-functions", llvm::cl::desc("Whether to prune functions that don't call critical OpenSSL ones"), llvm::cl::init(false), llvm::cl::value_desc("bool"));
+
 static llvm::cl::opt<std::string>
 InputFilename(llvm::cl::Positional, llvm::cl::desc("<input LLVM bitcode file>"),
   llvm::cl::Required, llvm::cl::value_desc("filename"));
@@ -103,7 +106,8 @@ int main(int argc, char **argv) {
     dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
 
-  pass_manager.add(new smack::PruneFunctionPass());
+  if (PruneSSLFunctions)
+    pass_manager.add(new smack::PruneFunctionPass());
   pass_manager.add(llvm::createAggressiveDCEPass());
   pass_manager.add(llvm::createGlobalDCEPass());
   pass_manager.add(llvm::createLowerSwitchPass());
