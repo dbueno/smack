@@ -42,3 +42,5 @@ corraldebug.out
 .vagrant
 build
 /install
+
+*.swp
