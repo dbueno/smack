@@ -1096,35 +1096,35 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
   unsigned n = !SmackOptions::BitPrecise || SmackOptions::NoByteAccessInference ? 1 : 4;
 
   s << "Procedure(\"" << naming.get(*F) << ".r" << dstReg << "\", ";
-  s << "params=[(\"dest\", \"ref\"), (\"val\", \"i8\"), (\"len\", \"size\"), (\"align\", \"i32\"), (\"isvolatile\", \"i1\")]";
+  s << "params=[(\"dest\", \"ref\"), (\"val\", \"i8\"), (\"len\", \"size\"), (\"align\", \"i32\"), (\"isvolatile\", \"i1\")],";
   s << (SmackOptions::MemoryModelImpls ? "" : ")") << endl;
 
   //for (unsigned i = 0; i < n; ++i)
   //  s << "modifies " << memPath(dstReg, 8 << i) << ";" << endl;
 
   if (SmackOptions::MemoryModelImpls) {
-    s << ", blocks=[" << endl;
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "  VarDecl(\"$oldDst" << ".i" << size << "\", \"[" << getPtrType() << "] " << int_type(size) << "\")," << endl;
-    }
+    s << "blocks=[" << endl;
+    s << "  VarDecl('$i', '" << int_type(32) << "')," << endl;
     s << "Block([" << endl;
+    s << "  AssignStmt([VarExpr('$i')], [Num(0)])," << endl;
+    s << "  GotoStmt(['$bb_assign', '$bb_done'])], name='$bb0')," << endl;
+    
+    // This block assigns to the memory at location i
+    s << "Block([" << endl;
+    s << "  AssumeStmt(FunExpr('$slt.i32', [VarExpr('$i'), VarExpr('len')]))," << endl;
+    s << "  AssignStmt([SelExpr(VarExpr('" << memPath(dstReg, 8) << "'), [VarExpr('$i')])], [VarExpr('val')])," << endl;
+    s << "  AssignStmt([VarExpr('$i')], [FunExpr('$add.i32', [VarExpr('$i'), Num(1)])])," << endl;
+    s << "  GotoStmt(['$bb_assign', '$bb_done'])," << endl;
+    s << "], name='$bb_assign')," << endl;
 
-    string val = "val";
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned size = 8 << i;
-      s << "  AssignStmt([VarExpr(\"$oldDst" << ".i" << size << "\")], [VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
-      s << "  HavocStmt([VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
-      s << "  ReturnStmt()," << endl;
-      s << "  #assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
-        << memPath(dstReg, size) << "[x] == "
-        << val
-        << ");" << endl;
-      s << "  #assume (forall x:ref :: !($sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1) ==> "
-        << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
-      val = val + "++" + val;
-    }
-    s << "], name='$bb1')])" << endl;
+    // This block exits
+    s << "Block([" << endl;
+    s << "AssumeStmt(NotExpr(FunExpr('$slt.i32', [VarExpr('$i'), VarExpr('len')])))," << endl;
+    s << "ReturnStmt()," << endl;
+    s << "], name='$bb_done')," << endl;
+
+      
+    s << "])" << endl;
   } else {
       s << "Procedure(\"$memset." << dstReg << "\", params=[('dest', 'int'), ('val', 'int'), ('len', 'int'), ('align', 'int'), ('isvolatile', 'bool')])";
   }
