@@ -1115,6 +1115,7 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
       unsigned size = 8 << i;
       s << "  AssignStmt([VarExpr(\"$oldDst" << ".i" << size << "\")], [VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
       s << "  HavocStmt([VarExpr(\"" << memPath(dstReg, size) << "\")])," << endl;
+      s << "  ReturnStmt()," << endl;
       s << "  #assume (forall x:ref :: $sle.ref(dest, x) == $1.i1 && $slt.ref(x, $add.ref(dest, len)) == $1.i1 ==> "
         << memPath(dstReg, size) << "[x] == "
         << val
@@ -1123,7 +1124,7 @@ string SmackRep::memsetProc(llvm::Function* F, int dstReg) {
         << memPath(dstReg, size) << "[x] == $oldDst" << ".i" << size << "[x]);" << endl;
       val = val + "++" + val;
     }
-    s << "])])" << endl;
+    s << "], name='$bb1')])" << endl;
   } else {
       s << "Procedure(\"$memset." << dstReg << "\", params=[('dest', 'int'), ('val', 'int'), ('len', 'int'), ('align', 'int'), ('isvolatile', 'bool')])";
   }
