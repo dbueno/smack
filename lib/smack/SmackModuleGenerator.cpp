@@ -129,36 +129,22 @@ void SmackModuleGenerator::generateProgram(llvm::Module& m) {
 }
 
 SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
-  string OutputFilename{};
   llvm::llvm_shutdown_obj shutdown;  // calls llvm_shutdown() on exit
   //llvm::cl::ParseCommandLineOptions(argc, argv, "SMACK - LLVM bitcode to Boogie transformation\n");
 
   //llvm::sys::PrintStackTraceOnErrorSignal();
   //llvm::PrettyStackTraceProgram PSTP(argc, argv);
-  llvm::EnableDebugBuffering = true;
+  //llvm::EnableDebugBuffering = true;
 
-  if (OutputFilename.empty()) {
-    OutputFilename = "a.bpl";
-  }
- 
   std::string error_msg;
   llvm::SMDiagnostic err;
   llvm::LLVMContext &context = llvm::getGlobalContext();  
   std::unique_ptr<llvm::Module> module;
-  std::unique_ptr<llvm::tool_output_file> output;
  
   module.reset(llvm::ParseIRFile(StringRef(input), err, context));
   if (module.get() == 0) {
     if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
     llvm::errs() << "error: " << "Bitcode was not properly read; " << err.getMessage() << "\n";
-    if (llvm::errs().has_colors()) llvm::errs().resetColor();
-    return nullptr;
-  }
- 
-  output.reset(new llvm::tool_output_file(OutputFilename.c_str(), error_msg, llvm::sys::fs::F_None));
-  if (!error_msg.empty()) {
-    if (llvm::errs().has_colors()) llvm::errs().changeColor(llvm::raw_ostream::RED);
-    llvm::errs() << "error: " << error_msg << "\n";
     if (llvm::errs().has_colors()) llvm::errs().resetColor();
     return nullptr;
   }
@@ -178,7 +164,7 @@ SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
   dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
 
-  pass_manager.add(new smack::PruneFunctionPass());
+  //pass_manager.add(new smack::PruneFunctionPass());
   pass_manager.add(llvm::createAggressiveDCEPass());
   pass_manager.add(llvm::createGlobalDCEPass());
   pass_manager.add(llvm::createLowerSwitchPass());
@@ -192,8 +178,6 @@ SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
   //pass_manager.add(new smack::BplFilePrinter(output->os()));
   pass_manager.add(actionPass);
   pass_manager.run(*module.get());
-
-  output->keep();
 
   return nullptr;
 }

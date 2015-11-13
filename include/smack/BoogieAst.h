@@ -436,7 +436,7 @@ public:
   void addStmt(const Stmt* s) {
     stmts.push_back(s);
   }
-  string getName() {
+  string getName() const {
     return name;
   }
 };
