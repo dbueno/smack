@@ -56,6 +56,7 @@ public:
   BinExpr(const Binary b, const Expr* l, const Expr* r) : op(b), lhs(l), rhs(r) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const BinExpr& e) { e.print(os); return os; }
 
 class CondExpr : public Expr {
   const Expr* cond;
@@ -66,6 +67,7 @@ public:
     : cond(c), then(t), else_(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const CondExpr& e) { e.print(os); return os; }
 
 class FunExpr : public Expr {
   string fun;
@@ -74,6 +76,7 @@ public:
   FunExpr(string f, vector<const Expr*> xs) : fun(f), args(xs) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const FunExpr& e) { e.print(os); return os; }
 
 class BoolLit : public Expr {
   bool val;
@@ -81,6 +84,7 @@ public:
   BoolLit(bool b) : val(b) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const BoolLit& e) { e.print(os); return os; }
 
 class IntLit : public Expr {
   string val;
@@ -98,6 +102,7 @@ public:
   }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const IntLit& e) { e.print(os); return os; }
 
 class BvLit : public Expr {
   string val;
@@ -111,6 +116,7 @@ public:
   }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const BvLit& e) { e.print(os); return os; }
 
 class NegExpr : public Expr {
   const Expr* expr;
@@ -118,6 +124,7 @@ public:
   NegExpr(const Expr* e) : expr(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const NegExpr& e) { e.print(os); return os; }
 
 class NotExpr : public Expr {
   const Expr* expr;
@@ -125,6 +132,7 @@ public:
   NotExpr(const Expr* e) : expr(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const NotExpr& e) { e.print(os); return os; }
 
 class QuantExpr : public Expr {
 public:
@@ -137,6 +145,7 @@ public:
   QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const QuantExpr& e) { e.print(os); return os; }
 
 class SelExpr : public Expr {
   const Expr* base;
@@ -146,6 +155,7 @@ public:
   SelExpr(const Expr* a, const Expr* i) : base(a), idxs(vector<const Expr*>(1, i)) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const SelExpr& e) { e.print(os); return os; }
 
 class UpdExpr : public Expr {
   const Expr* base;
@@ -158,6 +168,7 @@ public:
     : base(a), idxs(vector<const Expr*>(1, i)), val(v) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const UpdExpr& e) { e.print(os); return os; }
 
 class VarExpr : public Expr {
   string var;
@@ -166,11 +177,13 @@ public:
   string name() const { return var; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const VarExpr& e) { e.print(os); return os; }
 
 class AttrVal {
 public:
   virtual void print(ostream& os) const = 0;
 };
+inline std::ostream& operator<<(std::ostream& os, const AttrVal& e) { e.print(os); return os; }
 
 class StrVal : public AttrVal {
   string val;
@@ -178,6 +191,7 @@ public:
   StrVal(string s) : val(s) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const StrVal& e) { e.print(os); return os; }
 
 class ExprVal : public AttrVal {
   const Expr* val;
@@ -185,6 +199,7 @@ public:
   ExprVal(const Expr* e) : val(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const ExprVal& e) { e.print(os); return os; }
 
 class Attr {
 protected:
@@ -201,6 +216,7 @@ public:
   static const Attr* attr(string s, string v, int i, int j);
   static const Attr* attr(string s, vector<const Expr*> vs);
 };
+inline std::ostream& operator<<(std::ostream& os, const Attr& e) { e.print(os); return os; }
 
 class Stmt {
 public:
@@ -267,6 +283,7 @@ public:
   AssertStmt(const Expr* e) : Stmt(StmtKind::Assert), expr(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const AssertStmt& e) { e.print(os); return os; }
 
 class AssignStmt : public Stmt {
 public:
@@ -275,6 +292,7 @@ public:
   AssignStmt(vector<const Expr*> lhs, vector<const Expr*> rhs) : Stmt(StmtKind::Assign), lhs(lhs), rhs(rhs) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const AssignStmt& e) { e.print(os); return os; }
 
 class AssumeStmt : public Stmt {
 public:
@@ -286,6 +304,7 @@ public:
   }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const AssumeStmt& e) { e.print(os); return os; }
 
 class CallStmt : public Stmt {
 public:
@@ -298,6 +317,7 @@ public:
     : Stmt(StmtKind::Call), proc(p), params(ps), returns(rs), attrs(ax) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const CallStmt& e) { e.print(os); return os; }
 
 class Comment : public Stmt {
 public:
@@ -305,6 +325,7 @@ public:
   Comment(string s) : Stmt(StmtKind::Comment), str(s) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const Comment& e) { e.print(os); return os; }
 
 class GotoStmt : public Stmt {
 public:
@@ -312,6 +333,7 @@ public:
   GotoStmt(vector<string> ts) : Stmt(StmtKind::Goto), targets(ts) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const GotoStmt& e) { e.print(os); return os; }
 
 class HavocStmt : public Stmt {
 public:
@@ -319,6 +341,7 @@ public:
   HavocStmt(vector<string> vs) : Stmt(StmtKind::Havoc), vars(vs) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const HavocStmt& e) { e.print(os); return os; }
 
 class ReturnStmt : public Stmt {
 public:
@@ -326,6 +349,7 @@ public:
   ReturnStmt(const Expr* e = nullptr) : Stmt(StmtKind::Return), expr(e) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const ReturnStmt& e) { e.print(os); return os; }
 
 class CodeStmt : public Stmt {
 public:
@@ -333,6 +357,7 @@ public:
   CodeStmt(string s) : Stmt(StmtKind::Code), code(s) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const CodeStmt& e) { e.print(os); return os; }
 
 class Decl {
   static unsigned uniqueId;
@@ -383,6 +408,7 @@ public:
   kind getKind() const { return TYPE; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const TypeDecl& e) { e.print(os); return os; }
 
 class AxiomDecl : public Decl {
   const Expr* expr;
@@ -392,6 +418,7 @@ public:
   kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const AxiomDecl& e) { e.print(os); return os; }
 
 class ConstDecl : public Decl {
   string type;
@@ -401,6 +428,7 @@ public:
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const ConstDecl& e) { e.print(os); return os; }
 
 class FuncDecl : public Decl {
   vector< pair<string, string> > params;
@@ -413,6 +441,7 @@ public:
   kind getKind() const { return FUNC; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const FuncDecl& e) { e.print(os); return os; }
 
 class VarDecl : public Decl {
   string type;
@@ -421,6 +450,7 @@ public:
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const VarDecl& e) { e.print(os); return os; }
 
 class Block {
   string name;
@@ -440,6 +470,7 @@ public:
     return name;
   }
 };
+inline std::ostream& operator<<(std::ostream& os, const Block& e) { e.print(os); return os; }
 
 class CodeContainer {
 protected:
@@ -480,6 +511,7 @@ public:
   CodeExpr(Program& p) : CodeContainer(p) {}
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const CodeExpr& e) { e.print(os); return os; }
 
 class ProcDecl : public Decl, public CodeContainer {
 public:
@@ -509,6 +541,7 @@ public:
   bool isProc() { return true; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const ProcDecl& e) { e.print(os); return os; }
 
 class CodeDecl : public Decl {
 public:
@@ -516,6 +549,7 @@ public:
   kind getKind() const { return CODE; }
   void print(ostream& os) const;
 };
+inline std::ostream& operator<<(std::ostream& os, const CodeDecl& e) { e.print(os); return os; }
 
 class Program {
   // TODO While I would prefer that a program is just a set or sequence of
@@ -558,6 +592,7 @@ public:
     return procs;
   }
 };
+inline std::ostream& operator<<(std::ostream& os, const Program& e) { e.print(os); return os; }
 }
 
 #endif // BOOGIEAST_H
