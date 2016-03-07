@@ -178,7 +178,7 @@ SmackModuleGenerator *runSmack(string input, llvm::ModulePass *actionPass) {
   dl = new llvm::DataLayout(moduleDataLayout);
   if (dl) pass_manager.add(new llvm::DataLayoutPass(*dl));
 
-  pass_manager.add(new smack::PruneFunctionPass());
+  //pass_manager.add(new smack::PruneFunctionPass());
   pass_manager.add(llvm::createAggressiveDCEPass());
   pass_manager.add(llvm::createGlobalDCEPass());
   pass_manager.add(llvm::createLowerSwitchPass());
