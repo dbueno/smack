@@ -246,6 +246,7 @@ public:
   static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
 };
+inline std::ostream& operator<<(std::ostream& os, const Stmt& e) { e.print(os); return os; }
 
 inline std::ostream &operator<<(std::ostream &str, Stmt::StmtKind &kind) {
   switch (kind) {
