@@ -365,6 +365,7 @@ public:
     vector< pair<string,string> > args, vector< pair<string,string> > rets);
   static Decl* code(string s);
 };
+inline std::ostream& operator<<(std::ostream& os, const Decl& e) { e.print(os); return os; }
 
 struct DeclCompare {
   bool operator()(Decl* a, Decl* b) {
@@ -384,6 +385,7 @@ public:
   TypeDecl(string n, string t) : Decl(n), alias(t) {}
   kind getKind() const { return TYPE; }
   void print(ostream& os) const;
+  string getAlias() const { return alias; };
 };
 
 class AxiomDecl : public Decl {
@@ -393,6 +395,7 @@ public:
   AxiomDecl(const Expr* e) : Decl(""), expr(e) {}
   kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
+  const Expr* getExpr() const { return expr; }
 };
 
 class ConstDecl : public Decl {
@@ -422,6 +425,7 @@ public:
   VarDecl(string n, string t) : Decl(n), type(t) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
+  inline string getType() const { return type; }
 };
 
 class Block {
