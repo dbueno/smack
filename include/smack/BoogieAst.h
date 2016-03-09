@@ -94,6 +94,9 @@ private:
 public:
   BinExpr(const Binary b, const Expr* l, const Expr* r) : Expr(ExprKind::EBin), op(b), lhs(l), rhs(r) {}
   void print(ostream& os) const;
+  const Expr *getLhs() const { return lhs; }
+  const Expr *getRhs() const { return rhs; }
+  Binary getOp() const { return op; }
 };
 
 class CondExpr : public Expr {
