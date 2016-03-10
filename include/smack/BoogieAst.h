@@ -140,6 +140,7 @@ public:
     val = s.str();
   }
   void print(ostream& os) const;
+  string getVal() const { return val; }
 };
 
 class BvLit : public Expr {
@@ -167,6 +168,7 @@ class NotExpr : public Expr {
 public:
   NotExpr(const Expr* e) : Expr(ExprKind::ENot), expr(e) {}
   void print(ostream& os) const;
+  const Expr *getExpr() const { return expr; }
 };
 
 class QuantExpr : public Expr {
