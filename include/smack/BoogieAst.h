@@ -114,6 +114,8 @@ class FunExpr : public Expr {
   vector<const Expr*> args;
 public:
   FunExpr(string f, vector<const Expr*> xs) : Expr(ExprKind::EFun), fun(f), args(xs) {}
+  const string& getFun() const { return fun; }
+  const vector<const Expr*>& getArgs() const { return args; }
   void print(ostream& os) const;
 };
 
