@@ -192,6 +192,8 @@ public:
   SelExpr(const Expr* a, vector<const Expr*> i) : Expr(ExprKind::ESel), base(a), idxs(i) {}
   SelExpr(const Expr* a, const Expr* i) : Expr(ExprKind::ESel), base(a), idxs(vector<const Expr*>(1, i)) {}
   void print(ostream& os) const;
+    const Expr *getBase() const { return base; }
+    const vector<const Expr*>& getIdxs() const { return idxs; }
 };
 
 class UpdExpr : public Expr {
