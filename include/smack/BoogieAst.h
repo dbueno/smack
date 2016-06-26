@@ -18,6 +18,39 @@ class Program;
 
 class Expr {
 public:
+  enum class ExprKind {
+    EBin,
+    ECond,
+    EFun,
+    EBool,
+    EInt,
+    EBv,
+    ENeg,
+    ENot,
+    EQuant,
+    ESel,
+    EUpd,
+    EVar,
+    ECode
+  };
+  static string kindString(ExprKind kind) {
+    switch (kind) {
+      case ExprKind::EBin: return "EBin";
+      case ExprKind::ECond: return "ECond";
+      case ExprKind::EFun: return "EFun";
+      case ExprKind::EBool: return "EBool";
+      case ExprKind::EInt: return "EInt";
+      case ExprKind::EBv: return "EBv";
+      case ExprKind::ENeg: return "ENeg";
+      case ExprKind::ENot: return "ENot";
+      case ExprKind::EQuant: return "EQuant";
+      case ExprKind::ESel: return "ESel";
+      case ExprKind::EUpd: return "EUpd";
+      case ExprKind::EVar: return "EVar";
+      case ExprKind::ECode: return "ECode";
+    }
+  }
+  ExprKind getKind() const { return kind; }
   virtual void print(ostream& os) const = 0;
   static const Expr* exists(string v, string t, const Expr* e);
   static const Expr* forall(string v, string t, const Expr* e);
@@ -41,7 +74,13 @@ public:
   static const Expr* not_(const Expr* e);
   static const Expr* sel(const Expr* b, const Expr* i);
   static const Expr* sel(string b, string i);
+
+private:
+  const ExprKind kind;
+protected:
+  Expr(ExprKind kind) : kind(kind) {};
 };
+std::ostream& operator<<(std::ostream& os, const Expr& e);
 
 class BinExpr : public Expr {
 public:
@@ -53,8 +92,11 @@ private:
   const Expr* lhs;
   const Expr* rhs;
 public:
-  BinExpr(const Binary b, const Expr* l, const Expr* r) : op(b), lhs(l), rhs(r) {}
+  BinExpr(const Binary b, const Expr* l, const Expr* r) : Expr(ExprKind::EBin), op(b), lhs(l), rhs(r) {}
   void print(ostream& os) const;
+  const Expr *getLhs() const { return lhs; }
+  const Expr *getRhs() const { return rhs; }
+  Binary getOp() const { return op; }
 };
 
 class CondExpr : public Expr {
@@ -63,7 +105,7 @@ class CondExpr : public Expr {
   const Expr* else_;
 public:
   CondExpr(const Expr* c, const Expr* t, const Expr* e)
-    : cond(c), then(t), else_(e) {}
+    : Expr(ExprKind::ECond), cond(c), then(t), else_(e) {}
   void print(ostream& os) const;
 };
 
@@ -71,40 +113,44 @@ class FunExpr : public Expr {
   string fun;
   vector<const Expr*> args;
 public:
-  FunExpr(string f, vector<const Expr*> xs) : fun(f), args(xs) {}
+  FunExpr(string f, vector<const Expr*> xs) : Expr(ExprKind::EFun), fun(f), args(xs) {}
+  const string& getFun() const { return fun; }
+  const vector<const Expr*>& getArgs() const { return args; }
   void print(ostream& os) const;
 };
 
 class BoolLit : public Expr {
   bool val;
 public:
-  BoolLit(bool b) : val(b) {}
+  BoolLit(bool b) : Expr(ExprKind::EBool), val(b) {}
   void print(ostream& os) const;
+  bool getVal() const { return val; }
 };
 
 class IntLit : public Expr {
   string val;
 public:
-  IntLit(string v) : val(v) {}
-  IntLit(unsigned long v) {
+  IntLit(string v) : Expr(ExprKind::EInt), val(v) {}
+  IntLit(unsigned long v) : Expr(ExprKind::EInt) {
     stringstream s;
     s << v;
     val = s.str();
   }
-  IntLit(long v) {
+  IntLit(long v) : Expr(ExprKind::EInt) {
     stringstream s;
     s << v;
     val = s.str();
   }
   void print(ostream& os) const;
+  string getVal() const { return val; }
 };
 
 class BvLit : public Expr {
   string val;
   unsigned width;
 public:
-  BvLit(string v, unsigned w) : val(v), width(w) {}
-  BvLit(unsigned long v, unsigned w) : width(w) {
+  BvLit(string v, unsigned w) : Expr(ExprKind::EBv), val(v), width(w) {}
+  BvLit(unsigned long v, unsigned w) : Expr(ExprKind::EBv), width(w) {
     stringstream s;
     s << v;
     val = s.str();
@@ -115,15 +161,16 @@ public:
 class NegExpr : public Expr {
   const Expr* expr;
 public:
-  NegExpr(const Expr* e) : expr(e) {}
+  NegExpr(const Expr* e) : Expr(ExprKind::ENeg), expr(e) {}
   void print(ostream& os) const;
 };
 
 class NotExpr : public Expr {
   const Expr* expr;
 public:
-  NotExpr(const Expr* e) : expr(e) {}
+  NotExpr(const Expr* e) : Expr(ExprKind::ENot), expr(e) {}
   void print(ostream& os) const;
+  const Expr *getExpr() const { return expr; }
 };
 
 class QuantExpr : public Expr {
@@ -134,7 +181,7 @@ private:
   vector< pair<string,string> > vars;
   const Expr* expr;
 public:
-  QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : quant(q), vars(vs), expr(e) {}
+  QuantExpr(Quantifier q, vector< pair<string,string> > vs, const Expr* e) : Expr(ExprKind::EQuant), quant(q), vars(vs), expr(e) {}
   void print(ostream& os) const;
 };
 
@@ -142,9 +189,11 @@ class SelExpr : public Expr {
   const Expr* base;
   vector<const Expr*> idxs;
 public:
-  SelExpr(const Expr* a, vector<const Expr*> i) : base(a), idxs(i) {}
-  SelExpr(const Expr* a, const Expr* i) : base(a), idxs(vector<const Expr*>(1, i)) {}
+  SelExpr(const Expr* a, vector<const Expr*> i) : Expr(ExprKind::ESel), base(a), idxs(i) {}
+  SelExpr(const Expr* a, const Expr* i) : Expr(ExprKind::ESel), base(a), idxs(vector<const Expr*>(1, i)) {}
   void print(ostream& os) const;
+    const Expr *getBase() const { return base; }
+    const vector<const Expr*>& getIdxs() const { return idxs; }
 };
 
 class UpdExpr : public Expr {
@@ -153,16 +202,16 @@ class UpdExpr : public Expr {
   const Expr* val;
 public:
   UpdExpr(const Expr* a, vector<const Expr*> i, const Expr* v)
-    : base(a), idxs(i), val(v) {}
+    : Expr(ExprKind::EUpd), base(a), idxs(i), val(v) {}
   UpdExpr(const Expr* a, const Expr* i, const Expr* v)
-    : base(a), idxs(vector<const Expr*>(1, i)), val(v) {}
+    : Expr(ExprKind::EUpd), base(a), idxs(vector<const Expr*>(1, i)), val(v) {}
   void print(ostream& os) const;
 };
 
 class VarExpr : public Expr {
   string var;
 public:
-  VarExpr(string v) : var(v) {}
+  VarExpr(string v) : Expr(ExprKind::EVar), var(v) {}
   string name() const { return var; }
   void print(ostream& os) const;
 };
@@ -245,6 +294,7 @@ public:
   static const Stmt* code(string s);
   virtual void print(ostream& os) const = 0;
 };
+inline std::ostream& operator<<(std::ostream& os, const Stmt& e) { e.print(os); return os; }
 
 inline std::ostream &operator<<(std::ostream &str, Stmt::StmtKind &kind) {
   switch (kind) {
@@ -363,6 +413,7 @@ public:
     vector< pair<string,string> > args, vector< pair<string,string> > rets);
   static Decl* code(string s);
 };
+inline std::ostream& operator<<(std::ostream& os, const Decl& e) { e.print(os); return os; }
 
 struct DeclCompare {
   bool operator()(Decl* a, Decl* b) {
@@ -382,6 +433,7 @@ public:
   TypeDecl(string n, string t) : Decl(n), alias(t) {}
   kind getKind() const { return TYPE; }
   void print(ostream& os) const;
+  string getAlias() const { return alias; };
 };
 
 class AxiomDecl : public Decl {
@@ -391,6 +443,7 @@ public:
   AxiomDecl(const Expr* e) : Decl(""), expr(e) {}
   kind getKind() const { return UNNAMED; }
   void print(ostream& os) const;
+  const Expr* getExpr() const { return expr; }
 };
 
 class ConstDecl : public Decl {
@@ -420,6 +473,7 @@ public:
   VarDecl(string n, string t) : Decl(n), type(t) {}
   kind getKind() const { return STOR; }
   void print(ostream& os) const;
+  inline string getType() const { return type; }
 };
 
 class Block {
@@ -477,7 +531,7 @@ public:
 
 class CodeExpr : public Expr, public CodeContainer {
 public:
-  CodeExpr(Program& p) : CodeContainer(p) {}
+  CodeExpr(Program& p) : Expr(ExprKind::ECode), CodeContainer(p) {}
   void print(ostream& os) const;
 };
 
