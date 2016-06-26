@@ -118,6 +118,10 @@ string Naming::freshVarName(const llvm::Value& V) {
     s << PTR_VAR;
 
   s << varNum++;
+  
+  if (V.hasName())
+    s << "_" << V.getName().data();
+
   return s.str();
 }
 
